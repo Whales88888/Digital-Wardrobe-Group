@@ -1,8 +1,3 @@
-CREATE DATABASE digital_wardrobe;
-
-USE digital_wardrobe;
-
-
 -- 1. Users
 CREATE TABLE users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -11,13 +6,11 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL
 );
 
-
 -- 2. Categories
 CREATE TABLE categories (
     category_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL
 );
-
 
 -- 3. Clothing
 CREATE TABLE clothing (
@@ -36,7 +29,6 @@ CREATE TABLE clothing (
         REFERENCES categories(category_id)
 );
 
-
 -- 4. Outfits
 CREATE TABLE outfits (
     outfit_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -47,7 +39,6 @@ CREATE TABLE outfits (
     FOREIGN KEY (user_id)
         REFERENCES users(user_id)
 );
-
 
 -- 5. Outfit Items
 CREATE TABLE outfit_items (
