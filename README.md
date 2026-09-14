@@ -1,187 +1,165 @@
 # Digital Wardrobe – Tủ quần áo thông minh
 
-## ① Phân tích bài tập nhóm
+## Quy trình bài tập nhóm
 
-### 1. Phát triển cái gì?
+### ① Phân tích bài tập nhóm
 
-Nhóm phát triển hệ thống Web **Digital Wardrobe – Tủ quần áo thông minh**.
+**Phát triển:**  
+Xây dựng hệ thống **Digital Wardrobe** để quản lý tủ quần áo và các bộ trang phục.
 
-Hệ thống giúp người dùng quản lý tủ quần áo cá nhân trên nền tảng Web.
+**Objects / Table:**
 
-Các chức năng chính của hệ thống:
-
-- Quản lý thông tin người dùng
-- Thêm quần áo vào tủ
-- Xem danh sách quần áo
-- Phân loại quần áo
-- Chỉnh sửa thông tin quần áo
-- Xóa quần áo
-- Tạo Outfit từ các món quần áo
-- Xem danh sách Outfit
-- Chỉnh sửa và xóa Outfit
-
-### 2. Xác định Objects / Table
-
-Dựa trên các chức năng của hệ thống, nhóm xác định các Objects / Table cần quản lý:
-
-1. User
-2. Category
-3. Clothing
-4. Outfit
-5. Outfit_Item
-
-### 3. Xác định các đối tượng cần quản lý
-
-#### 3.1 User
-
-Quản lý thông tin người dùng của hệ thống.
-
-Các thông tin cần quản lý:
-
-- User ID
-- Name
-- Email
-- Password
-
-#### 3.2 Category
-
-Quản lý các loại quần áo trong hệ thống.
-
-Các thông tin cần quản lý:
-
-- Category ID
-- Category Name
-
-Các loại quần áo được sử dụng trong hệ thống gồm:
-
-- T-shirt
-- Shirt
-- Pants
-- Skirt
-- Dress
-- Jacket
-- Shoes
-
-#### 3.3 Clothing
-
-Quản lý các món quần áo thuộc về người dùng.
-
-Các thông tin cần quản lý:
-
-- Clothing ID
-- User ID
-- Category ID
-- Clothing Name
-- Color
-- Size
-- Image URL
-
-Mỗi Clothing thuộc về một User và một Category.
-
-#### 3.4 Outfit
-
-Quản lý các bộ trang phục do người dùng tạo.
-
-Các thông tin cần quản lý:
-
-- Outfit ID
-- User ID
-- Outfit Name
-- Description
-
-Mỗi Outfit thuộc về một User.
-
-#### 3.5 Outfit_Item
-
-Quản lý các món Clothing được sử dụng trong từng Outfit.
-
-Các thông tin cần quản lý:
-
-- Outfit Item ID
-- Outfit ID
-- Clothing ID
-
-Outfit_Item được sử dụng để liên kết Outfit và Clothing.
-
-### 4. Xác định mối quan hệ giữa các Objects
-
-#### User và Clothing
-
-Một User có thể có nhiều Clothing.
-
-Quan hệ:
-
-**User 1 : N Clothing**
-
-
-#### Category và Clothing
-
-Một Category có thể có nhiều Clothing.
-
-Một Clothing thuộc một Category.
-
-Quan hệ:
-
-**Category 1 : N Clothing**
-
-
-#### User và Outfit
-
-Một User có thể tạo nhiều Outfit.
-
-Quan hệ:
-
-**User 1 : N Outfit**
-
-
-#### Outfit và Clothing
-
-Một Outfit có thể chứa nhiều Clothing.
-
-Một Clothing có thể được sử dụng trong nhiều Outfit.
-
-Quan hệ:
-
-**Outfit N : N Clothing**
-
-Vì quan hệ giữa Outfit và Clothing là N:N nên sử dụng **Outfit_Item** làm bảng trung gian.
-
-### 5. Tổng hợp Objects / Table
-
-| Object / Table | Mục đích quản lý |
+| Object | Table |
 |---|---|
-| User | Quản lý người dùng |
-| Category | Quản lý loại quần áo |
-| Clothing | Quản lý các món quần áo |
-| Outfit | Quản lý các bộ trang phục |
-| Outfit_Item | Liên kết Outfit và Clothing |
+| User | `users` |
+| Category | `categories` |
+| Clothing | `clothing` |
+| Outfit | `outfits` |
+| Outfit Item | `outfit_items` |
 
-### 6. Sơ đồ quan hệ
+**Các đối tượng cần quản lý:**
+
+- Người dùng
+- Danh mục quần áo
+- Quần áo
+- Bộ trang phục
+- Các món quần áo trong bộ trang phục
+
+---
+
+### ② SQL
+
+**Database:** `digital_wardrobe`  
+**DBMS:** MariaDB
+
+**Các Table:**
+
+- `users`
+- `categories`
+- `clothing`
+- `outfits`
+- `outfit_items`
+
+**Khóa chính / khóa ngoại:**
+
+| Table | Primary Key | Foreign Key |
+|---|---|---|
+| `users` | `user_id` | — |
+| `categories` | `category_id` | — |
+| `clothing` | `clothing_id` | `user_id`, `category_id` |
+| `outfits` | `outfit_id` | `user_id` |
+| `outfit_items` | `outfit_item_id` | `outfit_id`, `clothing_id` |
+
+**SQL file:** sql/digital_wardrobe.sql
+
+---
+
+### ③ Hệ quản trị CSDL
+
+**DBMS:** MariaDB
+
+**Database:** `digital_wardrobe`
+
+Database gồm 5 bảng:
+
+- `users`
+- `categories`
+- `clothing`
+- `outfits`
+- `outfit_items`
+
+**Ảnh minh chứng:**
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 11 27 22" src="https://github.com/user-attachments/assets/3b0c9ea6-acba-4614-8598-7b8eb090c580" />
+
+---
+
+### ④ Kết nối CSDL
+
+Backend sử dụng Node.js để kết nối với MariaDB.
+
+**File kết nối:** backend/dbconnection.js
+
+**Thông tin kết nối:**
+
+- Host
+- Username
+- Password
+- Port
+- Database
+- SSL
+
+Sử dụng:
+
+- `mariadb`
+- `dotenv`
+- Connection Pool
+
+**Ảnh minh chứng:**
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 11 28 53" src="https://github.com/user-attachments/assets/5f98d494-3bb9-4851-9c38-e4e7b118abdd" />
+
+---
+
+### ⑤ Backend – CRUD
+
+Backend sử dụng **Node.js + Express.js**.
+
+CRUD được thực hiện cho 5 Object:
+
+| Object | GET | POST | PUT | DELETE |
+|---|---|---|---|---|
+| Users | ✓ | ✓ | ✓ | ✓ |
+| Categories | ✓ | ✓ | ✓ | ✓ |
+| Clothing | ✓ | ✓ | ✓ | ✓ |
+| Outfits | ✓ | ✓ | ✓ | ✓ |
+| Outfit Items | ✓ | ✓ | ✓ | ✓ |
+
+**CRUD:**
+
+- Create → POST
+- Read → GET
+- Update → PUT
+- Delete → DELETE
+
+**Các file CRUD:**
 
 ```text
-USER
- │
- ├── 1 : N ── CLOTHING ── N : 1 ── CATEGORY
- │
- └── 1 : N ── OUTFIT
-                  │
-                  │ 1 : N
-                  ↓
-             OUTFIT_ITEM
-                  │
-                  │ N : 1
-                  ↓
-              CLOTHING
-
+backend/routes/
+├── users.js
+├── categories.js
+├── clothing.js
+├── outfits.js
+└── outfitItems.js
 ```
-### 7. Kết luận
+**Ảnh minh chứng:**
 
-Hệ thống **Digital Wardrobe** gồm 5 Objects / Table chính:
+### CRUD cho Users
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 20 52" src="https://github.com/user-attachments/assets/0bd90bd4-b520-420a-8e78-5da1d72a89c4" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 21 11" src="https://github.com/user-attachments/assets/a5639efc-e5a2-462c-9faf-c21e0901db6a" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 21 21" src="https://github.com/user-attachments/assets/3a84ac70-4365-44c2-a2ea-b7895b9e2110" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 21 28" src="https://github.com/user-attachments/assets/d803af14-9f66-4433-a675-bc2c25b75fc1" />
 
-1. **User** – Quản lý người dùng
-2. **Category** – Quản lý loại quần áo
-3. **Clothing** – Quản lý các món quần áo
-4. **Outfit** – Quản lý các bộ trang phục
-5. **Outfit_Item** – Quản lý các món quần áo trong từng Outfit
+### CRUD cho Categories
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 22 26" src="https://github.com/user-attachments/assets/83bb3332-492c-40af-b44b-24e74286bc41" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 25 43" src="https://github.com/user-attachments/assets/dace1472-6559-4ec4-a199-88e10df24e1e" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 26 30" src="https://github.com/user-attachments/assets/b3233d84-10c2-4625-8df7-e1103b42f979" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 27 11" src="https://github.com/user-attachments/assets/4b509a51-2812-4309-979a-c1014db24a2d" />
 
-Các Objects này sẽ được sử dụng để thiết kế Database và các Table.
+### CRUD cho Clothing
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 34 15" src="https://github.com/user-attachments/assets/f485028d-d32d-499f-9ba1-bf4aa2da01f1" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 35 30" src="https://github.com/user-attachments/assets/76ce03e3-e08a-4cff-9deb-ac02bda33c68" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 36 04" src="https://github.com/user-attachments/assets/a51c362b-c84d-416e-a371-60080f518ccc" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 36 31" src="https://github.com/user-attachments/assets/4d678585-e96f-477a-b14f-980ad6850d72" />
+
+### CRUD cho Outfits
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 38 18" src="https://github.com/user-attachments/assets/0c57b179-ccc2-4e32-b0e5-abd4a66e852e" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 38 23" src="https://github.com/user-attachments/assets/aa53fda8-3e20-40c5-a2a4-dff794dde0a1" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 38 31" src="https://github.com/user-attachments/assets/c9ddd795-6fe2-41ef-ac2d-6302947ddd14" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 38 40" src="https://github.com/user-attachments/assets/b976c885-a082-4a73-b751-d5477d32eec1" />
+
+### CRUD cho Outfit Items
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 40 48" src="https://github.com/user-attachments/assets/cc707c97-28e8-45a9-bfc5-7788d6f2b918" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 40 52" src="https://github.com/user-attachments/assets/a063e281-a2db-4ce8-bde4-8db302d8a2af" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 40 58" src="https://github.com/user-attachments/assets/f27bb61f-07b5-4664-b9a8-7d708bdb5d4d" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 41 02" src="https://github.com/user-attachments/assets/939a5f04-a686-499c-9fd3-80f0a82ea519" />
+
+**GitHub Repository:** https://github.com/Whales88888/Digital-Wardrobe-Group
