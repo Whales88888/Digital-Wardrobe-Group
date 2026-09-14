@@ -175,10 +175,13 @@ USER
 
 ```
 ### 7. Kết luận
-Hệ thống Digital Wardrobe gồm 5 Objects / Table chính:
-User
-Category
-Clothing
-Outfit
-Outfit_Item
-Các Objects sẽ được sử dụng để thiết kế Database.
+
+Hệ thống **Digital Wardrobe** gồm 5 Objects / Table chính:
+
+1. **User** – Quản lý người dùng
+2. **Category** – Quản lý loại quần áo
+3. **Clothing** – Quản lý các món quần áo
+4. **Outfit** – Quản lý các bộ trang phục
+5. **Outfit_Item** – Quản lý các món quần áo trong từng Outfit
+
+Các Objects này sẽ được sử dụng để thiết kế Database và các Table.
