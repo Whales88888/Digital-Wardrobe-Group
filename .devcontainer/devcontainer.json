@@ -13,5 +13,5 @@
       ]
     }
   },
-  "postCreateCommand": "cd backend && npm install"
+  "postCreateCommand": "bash .devcontainer/setup-db.sh && cd backend && npm install"
 }
