@@ -1,4 +1,4 @@
-# Digital Wardrobe – Tủ quần áo thông minh
+# Digital Wardrobe – Xây dựng phát triển hệ thống quản lý tủ quần áo thông minh
 
 ## Quy trình bài tập nhóm
 
