@@ -1,11 +1,11 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
-  Patch,
   Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
 } from '@nestjs/common';
 
 import { OutfitItemService } from './outfit-item.service';
@@ -18,19 +18,17 @@ export class OutfitItemController {
   ) {}
 
   @Get()
-  findAll(): Promise<OutfitItem[]> {
+  findAll() {
     return this.outfitItemService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string): Promise<OutfitItem> {
+  findOne(@Param('id') id: string) {
     return this.outfitItemService.findOne(Number(id));
   }
 
   @Post()
-  create(
-    @Body() data: Partial<OutfitItem>,
-  ): Promise<OutfitItem> {
+  create(@Body() data: Partial<OutfitItem>) {
     return this.outfitItemService.create(data);
   }
 
@@ -38,15 +36,12 @@ export class OutfitItemController {
   update(
     @Param('id') id: string,
     @Body() data: Partial<OutfitItem>,
-  ): Promise<OutfitItem> {
-    return this.outfitItemService.update(
-      Number(id),
-      data,
-    );
+  ) {
+    return this.outfitItemService.update(Number(id), data);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string): Promise<void> {
+  remove(@Param('id') id: string) {
     return this.outfitItemService.remove(Number(id));
   }
 }
