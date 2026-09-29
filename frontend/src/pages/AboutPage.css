@@ -1,0 +1,128 @@
+.about-page {
+  background: var(--canvas);
+}
+
+.about-intro {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: clamp(72px, 11vw, 150px) 24px 105px;
+  text-align: center;
+}
+
+.about-intro h1 {
+  max-width: 780px;
+  margin: 22px auto 18px;
+  font-family: var(--serif);
+  font-size: 68px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.05;
+}
+
+.about-intro p {
+  max-width: 540px;
+  margin: 0 auto 27px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.about-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 0 clamp(24px, 9vw, 130px) 92px;
+}
+
+.about-details article {
+  padding: 0 28px 0 0;
+}
+
+.about-details article + article {
+  padding-left: 28px;
+  border-left: 1px solid var(--line);
+}
+
+.about-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  margin-bottom: 21px;
+  border-radius: 50%;
+  background: var(--rose-soft);
+  color: var(--rose);
+}
+
+.about-details h2 {
+  margin: 13px 0 10px;
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.about-details p,
+.about-note p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.about-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 33px clamp(24px, 9vw, 130px);
+  border-top: 1px solid var(--line);
+  background: #efede7;
+}
+
+.about-note p {
+  max-width: 610px;
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .about-intro {
+    padding: 82px 22px 66px;
+    text-align: left;
+  }
+
+  .about-intro h1 {
+    margin: 20px 0 16px;
+    font-size: 48px;
+  }
+
+  .about-intro p {
+    margin: 0 0 22px;
+  }
+
+  .about-details {
+    grid-template-columns: 1fr;
+    padding: 0 22px 58px;
+  }
+
+  .about-details article,
+  .about-details article + article {
+    padding: 23px 0;
+    border-left: 0;
+  }
+
+  .about-details article + article {
+    border-top: 1px solid var(--line);
+  }
+
+  .about-icon {
+    margin-bottom: 15px;
+  }
+
+  .about-note {
+    align-items: start;
+    flex-direction: column;
+    gap: 10px;
+    padding: 25px 22px;
+  }
+}

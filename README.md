@@ -1,4 +1,131 @@
-# Digital Wardrobe – Xây dựng phát triển hệ thống quản lý tủ quần áo thông minh
+# Digital Wardrobe
+
+## Overview
+
+Digital Wardrobe is a clothing collection and outfit management application for the existing MariaDB database and Express REST API in this repository. The frontend renders live API records; it does not use mock wardrobe data.
+
+## Tech Stack
+
+- React 19, TypeScript and Vite
+- React Router for public and application routes
+- Fetch API for HTTP requests
+- Express 5 REST API
+- MariaDB
+
+## Architecture
+
+```text
+React UI
+	↓
+Fetch API services
+	↓
+Express REST API
+	↓
+MariaDB
+```
+
+Vite proxies `/api` to Express at `http://127.0.0.1:9000` during local development and preview. A deployed frontend needs a same-origin reverse proxy because the current Express server does not enable CORS.
+
+## Features
+
+- Public home with live clothing and outfit previews
+- About page describing the database-backed project and its current limits
+- Dashboard totals and category distribution from API responses
+- Wardrobe search, category filter, sort, details and CRUD
+- Category listing, counts, filtering and CRUD
+- Outfit CRUD with linked clothing from Outfit Items
+- Loading, empty, error/retry, validation, delete confirmation and broken-image fallback states
+- Responsive public and application layouts
+
+## Frontend Structure
+
+```text
+frontend/src/
+├── components/  # shared states and clothing images
+├── hooks/       # API resource state
+├── layouts/     # public and application shells
+├── pages/       # home, dashboard and management pages
+├── services/    # typed API client and resource methods
+├── App.tsx      # React Router routes
+└── main.tsx
+```
+
+## API Integration
+
+| Resource | Endpoints used | Methods |
+|---|---|---|
+| Users | `/api/users` | GET |
+| Categories | `/api/categories`, `/api/categories/:id` | GET, POST, PUT, DELETE |
+| Clothing | `/api/clothing`, `/api/clothing/:id` | GET, POST, PUT, DELETE |
+| Outfits | `/api/outfits`, `/api/outfits/:id` | GET, POST, PUT, DELETE |
+| Outfit Items | `/api/outfit-items`, `/api/outfit-items/:id` | GET, POST, PUT, DELETE |
+
+Public routes are `/` and `/about`. Application routes are `/app/dashboard`, `/app/wardrobe`, `/app/wardrobe/:id`, `/app/categories` and `/app/outfits`. `/dashboard`, `/wardrobe`, `/categories` and `/outfits` are redirects to their `/app/...` counterparts.
+
+Clothing fields follow the schema: `user_id`, `category_id`, `name`, `color`, `size`, `image_url`. Outfit Items link records through `outfit_id` and `clothing_id`. The API has no timestamps, season/type fields, image upload, or user-scoped filtering.
+
+Because the existing API has no cascade-delete or transaction endpoint, the frontend removes dependent Outfit Item links before deleting a Clothing/Outfit record and attempts to restore links if a later request fails. This sequence is not atomic; if restoration also fails, refresh the affected views and verify the relationships before retrying.
+
+## How to Run Backend
+
+Ensure MariaDB is running, then from the repository root:
+
+```bash
+sudo service mariadb start
+node backend/server.js
+```
+
+Express defaults to port `9000` and reads database configuration from the root `.env`. A fresh devcontainer creates that ignored file with random local credentials. For manual setup, copy `.env.example` to `.env` and replace the placeholders before starting MariaDB/Express. Do not commit environment files or expose their values.
+
+## How to Run Frontend
+
+In another terminal from the repository root:
+
+```bash
+npm --prefix frontend install
+npm --prefix frontend run dev
+```
+
+Vite serves the app at `http://localhost:5173`.
+
+## Environment Variables
+
+The frontend uses `VITE_API_URL`, defaulting to `/api`. See `frontend/.env.example`; an optional `frontend/.env` is ignored by Git. Frontend variables must not contain database credentials.
+
+## Authentication Limitation
+
+Authentication is **not available from the current backend**. There are no login/logout, session/JWT, or authorization endpoints/middleware. The existing Users CRUD route is not an authentication API; its create/update handlers write the supplied password directly, so it must not be used as a registration flow without backend security work.
+
+## Testing
+
+| Check | Result |
+|---|---|
+| GET API | PASS |
+| POST | PASS through forms/API for Categories, Clothing, Outfits and Outfit Items |
+| PUT/PATCH | PASS through forms/API for Categories, Clothing and Outfits; Express uses PUT, not PATCH |
+| DELETE | PASS through forms/API for Categories, Clothing, Outfits and Outfit Items; temporary records removed and counts restored |
+| Form validation | PASS: required fields, owner/category selection and invalid image URL blocked without writes |
+| Responsive | PASS: Home, About and four management pages checked at desktop, tablet and mobile widths; Clothing/Category modals fit; no horizontal overflow |
+| Lint | PASS: `npm --prefix frontend run lint` |
+| Build | PASS: `npm --prefix frontend run build` |
+| Backend build/lint | PASS: `npm --prefix backend run build` and `npm --prefix backend run lint` |
+| Console/network | PASS: no console/page errors, failed requests or HTTP errors in production-preview route checks |
+
+CRUD was tested through both the UI and API using temporary records. The API test IDs were Category `3`, Clothing `2`, Outfits `2` and `3`, and Outfit Item `14`; UI CRUD used separately named temporary rows. Clothing and Outfit deletes were also tested with dependent Outfit Items. All test rows were deleted, and collection counts matched their pre-test values. The database currently has 1 user, 2 categories, 1 clothing item, 1 outfit and 11 outfit-item rows.
+
+Run the built app locally with `npm --prefix frontend run preview` after building. Production hosting still needs an `/api` reverse proxy to Express.
+
+## Project Notes
+
+### Backend Structure
+
+The frontend target is the Express application started by `backend/server.js`, with resource handlers in `backend/routes/` and the MariaDB pool in `backend/dbconnection.js`. `backend/src/` contains a separate NestJS/TypeORM scaffold and is not the API target used by the frontend. The root README's legacy CRUD screenshots document the Express routes.
+
+### Database
+
+The `digital_wardrobe` MariaDB schema is defined in `sql/digital_wardrobe.sql` and contains `users`, `categories`, `clothing`, `outfits` and `outfit_items`. Foreign keys connect clothing to users/categories and outfit items to outfits/clothing. The UI respects these relationships when deleting linked records; no schema changes were made.
+
+The former fixed local bootstrap credential was removed from current source and appears in Git-history commit `6483a86f6abf`; history was not rewritten. The active local MariaDB account has been rotated to a random credential, and both ignored `.env` files are synchronized with owner-only permissions. Anyone with another clone should rotate their own local account independently. Fresh devcontainers generate random credentials. Runtime `.env` files are ignored and must not be committed.
 
 ## Quy trình bài tập nhóm
 
