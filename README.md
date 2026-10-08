@@ -227,6 +227,8 @@ Cần nộp tối thiểu ảnh API hoạt động thành công và ảnh dữ l
 
 3. Bấm **Send**. Đăng ký thành công trả mã `201`. Nếu email đã tồn tại, đổi sang email khác.
 
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-08 lúc 07 52 56" src="https://github.com/user-attachments/assets/6c74ae92-f4a4-4d98-a825-a999b1c24243" />
+
 4. Tạo yêu cầu `POST http://localhost:3000/auth/login`, chọn **Body → raw → JSON** và nhập:
 
    ```json
@@ -237,12 +239,18 @@ Cần nộp tối thiểu ảnh API hoạt động thành công và ảnh dữ l
    ```
 
    Đăng nhập thành công trả mã `200` cùng `access_token`.
+   
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-08 lúc 07 53 08" src="https://github.com/user-attachments/assets/df86791f-e3a4-4fc7-bf63-3d7ddda24cc2" />
 
 5. Tạo yêu cầu `GET http://localhost:3000/user/me`. Gửi một lần không có token để kiểm tra phản hồi `401 Unauthorized`. Sau đó chọn **Authorization → Bearer Token**, dán token và gửi lại; kết quả thành công là `200 OK`.
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-08 lúc 07 53 12" src="https://github.com/user-attachments/assets/b7dd6293-de08-43be-9f5c-e41870d430ed" />
 
 ### Ảnh dữ liệu MariaDB
 
 Sau khi đăng nhập MariaDB và chạy truy vấn ở bước tiếp theo, chụp ảnh phần truy vấn cùng hàng kết quả. Không đưa mật khẩu, JWT hoặc mã băm mật khẩu vào ảnh nộp.
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-08 lúc 07 57 29" src="https://github.com/user-attachments/assets/a8f65023-037c-4265-8d14-71b8f0a011c5" />
 
 ## Kiểm thử và kiểm tra
 
