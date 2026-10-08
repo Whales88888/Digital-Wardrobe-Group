@@ -7,9 +7,6 @@ import { DatabaseModule } from '../database/database.module';
 @Module({
   imports: [DatabaseModule],
   controllers: [OutfitController],
-  providers: [
-    OutfitService,
-    ...outfitProviders,
-  ],
+  providers: [OutfitService, ...outfitProviders],
 })
 export class OutfitModule {}

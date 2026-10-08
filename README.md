@@ -92,9 +92,92 @@ Vite serves the app at `http://localhost:5173`.
 
 The frontend uses `VITE_API_URL`, defaulting to `/api`. See `frontend/.env.example`; an optional `frontend/.env` is ignored by Git. Frontend variables must not contain database credentials.
 
-## Authentication Limitation
+## NestJS Authentication API
 
-Authentication is **not available from the current backend**. There are no login/logout, session/JWT, or authorization endpoints/middleware. The existing Users CRUD route is not an authentication API; its create/update handlers write the supplied password directly, so it must not be used as a registration flow without backend security work.
+The NestJS backend in `backend/src/` now provides public registration and login endpoints and protects its API routes with a JWT bearer-token guard. This NestJS service is separate from the Express API currently used by the frontend; the frontend does not yet have a login screen or send JWTs.
+
+Start MariaDB, copy `backend/.env.example` to `backend/.env`, set the database credentials, and replace `JWT_SECRET` with a private random value of at least 32 characters. From the repository root, start NestJS with:
+
+```bash
+npm --prefix backend run start:dev
+```
+
+The NestJS server uses port `3000` by default. Example requests (replace the sample password and token):
+
+```bash
+curl -X POST http://localhost:3000/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Wardrobe User","email":"user@example.com","password":"secure-pass-123"}'
+
+curl -X POST http://localhost:3000/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"user@example.com","password":"secure-pass-123"}'
+
+curl http://localhost:3000/clothing \
+  -H 'Authorization: Bearer <access_token>'
+```
+
+Registration requires a name, valid email and a password of at least 8 characters and no more than 72 UTF-8 bytes. Passwords are stored as bcrypt hashes, duplicate emails are rejected, and responses omit the password. Access tokens expire after one hour; all NestJS endpoints except `/auth/register` and `/auth/login` require `Authorization: Bearer <access_token>`. `GET/PATCH /user/me` only accesses the signed-in user's account. Clothing, outfits and outfit items are also restricted to the owner in the JWT; a request cannot choose another `user_id` or attach another user's clothing to an outfit. Use the screenshot steps below to capture a successful API response and its corresponding database row. Existing accounts with plaintext passwords need a password reset to a bcrypt hash before they can use this login flow; no insecure plaintext fallback is enabled.
+
+The NestJS CRUD API uses the same database, but it is separate from the Express API described above. Authentication is not yet wired into the Express routes or the React frontend.
+
+### Chụp ảnh minh chứng bài tập
+
+1. Tạo `backend/.env` từ `backend/.env.example`, điền thông tin MariaDB và đặt `JWT_SECRET` riêng dài ít nhất 32 ký tự. Khởi động MariaDB và API bằng `npm --prefix backend run start:dev`.
+2. Mở terminal thứ hai tại thư mục gốc repo, đăng ký một tài khoản thử (đổi email nếu đã tồn tại):
+
+   ```bash
+   curl -i -X POST http://localhost:3000/auth/register \
+     -H 'Content-Type: application/json' \
+     -d '{"name":"Wardrobe Demo","email":"wardrobe-demo@example.com","password":"demo-pass-123"}'
+   ```
+
+   Chụp ảnh phản hồi `201` có `access_token` và thông tin người dùng. Token là thông tin bí mật; che token trong ảnh trước khi nộp.
+
+3. Đăng nhập để lấy token mới, thay email/mật khẩu bằng thông tin đã đăng ký:
+
+   ```bash
+   curl -i -X POST http://localhost:3000/auth/login \
+     -H 'Content-Type: application/json' \
+     -d '{"email":"wardrobe-demo@example.com","password":"demo-pass-123"}'
+   ```
+
+   Chụp ảnh phản hồi `200`. Tiếp theo dùng token đăng nhập để kiểm tra API được bảo vệ (thay `<TOKEN>` bằng token vừa nhận):
+
+   ```bash
+   curl -i http://localhost:3000/user/me \
+     -H 'Authorization: Bearer <TOKEN>'
+
+   curl -i http://localhost:3000/clothing \
+     -H 'Authorization: Bearer <TOKEN>'
+   ```
+
+   Để chụp minh chứng authorization, gọi thử `GET /user/me` không có header token: API phải trả `401 Unauthorized`. Có thể chụp hai kết quả (không token và có token) trong Postman hoặc terminal; không để lộ token trong ảnh.
+
+4. Mở MariaDB client bằng tài khoản local của bạn và chạy truy vấn sau để chụp ảnh hàng user; truy vấn chỉ hiển thị trạng thái mật khẩu đã được băm, không hiển thị hash:
+
+   ```sql
+   SELECT user_id, name, email,
+          CASE WHEN password LIKE '$2%' THEN 'bcrypt hash saved'
+               ELSE 'not bcrypt' END AS password_storage
+   FROM users
+   WHERE email = 'wardrobe-demo@example.com';
+   ```
+
+   Nộp tối thiểu một ảnh API đăng ký/đăng nhập thành công và một ảnh kết quả truy vấn `users`. Nếu dùng ảnh Postman/terminal, đảm bảo ảnh có URL hoặc tên endpoint và status code.
+
+Với database đã tạo trước đó, kiểm tra email trùng trước khi thêm ràng buộc duy nhất:
+
+```sql
+SELECT LOWER(email) AS normalized_email, COUNT(*) AS total
+FROM users
+GROUP BY LOWER(email)
+HAVING COUNT(*) > 1;
+
+ALTER TABLE users ADD UNIQUE KEY uq_users_email (email);
+```
+
+Chỉ chạy lệnh `ALTER TABLE` khi truy vấn đầu không trả về dòng nào; sao lưu DB trước khi thay đổi schema. Database mới sẽ nhận ràng buộc này từ `sql/digital_wardrobe.sql`.
 
 ## Testing
 

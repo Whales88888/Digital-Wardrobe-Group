@@ -10,10 +10,12 @@ import { CategoryModule } from './category/category.module';
 import { ClothingModule } from './clothing/clothing.module';
 import { OutfitModule } from './outfit/outfit.module';
 import { OutfitItemModule } from './outfit-item/outfit-item.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     DatabaseModule,
+    AuthModule,
 
     UserModule,
     CategoryModule,

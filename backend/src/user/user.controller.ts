@@ -1,45 +1,23 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Param,
-  Body,
-} from '@nestjs/common';
-
-import { UserService } from './user.service';
+import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { AuthenticatedUser } from '../auth/current-user.decorator';
 import { User } from './user.entity';
+import { UserService } from './user.service';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get()
-  findAll() {
-    return this.userService.findAll();
+  @Get('me')
+  findMe(@CurrentUser() user: AuthenticatedUser) {
+    return this.userService.findOne(user.sub);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOne(Number(id));
-  }
-
-  @Post()
-  create(@Body() data: Partial<User>) {
-    return this.userService.create(data);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
+  @Patch('me')
+  updateMe(
+    @CurrentUser() user: AuthenticatedUser,
     @Body() data: Partial<User>,
   ) {
-    return this.userService.update(Number(id), data);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.userService.remove(Number(id));
+    return this.userService.update(user.sub, data);
   }
 }
