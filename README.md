@@ -1,375 +1,325 @@
-# Digital Wardrobe
+# Xây dựng phát triển hệ thống quản lý tủ quần áo thông minh
 
-## Overview
+## Giới thiệu
 
-Digital Wardrobe is a clothing collection and outfit management application for the existing MariaDB database and Express REST API in this repository. The frontend renders live API records; it does not use mock wardrobe data.
+Đồ án xây dựng ứng dụng quản lý tủ quần áo và phối hợp trang phục. Người dùng có thể xem, tìm kiếm, phân loại quần áo; quản lý danh mục; tạo bộ trang phục từ các món đồ trong tủ. Dữ liệu được lưu trong MariaDB và giao diện hiển thị dữ liệu thật từ máy chủ.
 
-## Tech Stack
+Kho mã hiện có hai phần máy chủ riêng:
 
-- React 19, TypeScript and Vite
-- React Router for public and application routes
-- Fetch API for HTTP requests
-- Express 5 REST API
-- MariaDB
+- **Express** (`backend/server.js`, `backend/routes/`): API đang được giao diện React sử dụng.
+- **NestJS** (`backend/src/`): ứng dụng riêng có chức năng đăng ký, đăng nhập bằng JWT và giới hạn dữ liệu quần áo/trang phục theo người dùng. Chức năng xác thực hiện chưa nối vào giao diện React hoặc API Express.
 
-## Architecture
+## Công nghệ sử dụng
 
-```text
-React UI
-	↓
-Fetch API services
-	↓
-Express REST API
-	↓
-MariaDB
-```
-
-Vite proxies `/api` to Express at `http://127.0.0.1:9000` during local development and preview. A deployed frontend needs a same-origin reverse proxy because the current Express server does not enable CORS.
-
-## Features
-
-- Public home with live clothing and outfit previews
-- About page describing the database-backed project and its current limits
-- Dashboard totals and category distribution from API responses
-- Wardrobe search, category filter, sort, details and CRUD
-- Category listing, counts, filtering and CRUD
-- Outfit CRUD with linked clothing from Outfit Items
-- Loading, empty, error/retry, validation, delete confirmation and broken-image fallback states
-- Responsive public and application layouts
-
-## Frontend Structure
-
-```text
-frontend/src/
-├── components/  # shared states and clothing images
-├── hooks/       # API resource state
-├── layouts/     # public and application shells
-├── pages/       # home, dashboard and management pages
-├── services/    # typed API client and resource methods
-├── App.tsx      # React Router routes
-└── main.tsx
-```
-
-## API Integration
-
-| Resource | Endpoints used | Methods |
+| Thành phần | Công nghệ | Vai trò |
 |---|---|---|
-| Users | `/api/users` | GET |
-| Categories | `/api/categories`, `/api/categories/:id` | GET, POST, PUT, DELETE |
-| Clothing | `/api/clothing`, `/api/clothing/:id` | GET, POST, PUT, DELETE |
-| Outfits | `/api/outfits`, `/api/outfits/:id` | GET, POST, PUT, DELETE |
-| Outfit Items | `/api/outfit-items`, `/api/outfit-items/:id` | GET, POST, PUT, DELETE |
+| Giao diện | React, TypeScript, Vite | Hiển thị và tương tác với ứng dụng web |
+| Điều hướng | React Router | Chuyển giữa các trang |
+| API hiện dùng bởi giao diện | Node.js, Express | Nhận và xử lý yêu cầu từ giao diện |
+| API xác thực | NestJS, TypeScript | Đăng ký, đăng nhập và kiểm tra JWT |
+| Cơ sở dữ liệu | MariaDB | Lưu tài khoản, danh mục, quần áo và trang phục |
+| Kết nối cơ sở dữ liệu | MariaDB driver, TypeORM | Đọc/ghi dữ liệu từ máy chủ |
 
-Public routes are `/` and `/about`. Application routes are `/app/dashboard`, `/app/wardrobe`, `/app/wardrobe/:id`, `/app/categories` and `/app/outfits`. `/dashboard`, `/wardrobe`, `/categories` and `/outfits` are redirects to their `/app/...` counterparts.
+## Chức năng chính
 
-Clothing fields follow the schema: `user_id`, `category_id`, `name`, `color`, `size`, `image_url`. Outfit Items link records through `outfit_id` and `clothing_id`. The API has no timestamps, season/type fields, image upload, or user-scoped filtering.
+- Trang chủ giới thiệu ứng dụng và hiển thị trước một số quần áo, trang phục từ cơ sở dữ liệu.
+- Bảng điều khiển hiển thị số liệu tổng quan và số lượng theo danh mục.
+- Quản lý quần áo: xem, tìm kiếm, lọc theo danh mục, sắp xếp, xem chi tiết, thêm, sửa và xóa.
+- Quản lý danh mục: xem, lọc, đếm số lượng, thêm, sửa và xóa.
+- Quản lý trang phục và các món quần áo được ghép vào trang phục.
+- Hiển thị trạng thái đang tải, danh sách trống, lỗi và thử tải lại; xác nhận trước khi xóa.
+- Giao diện thích ứng với máy tính, máy tính bảng và điện thoại.
+- NestJS hỗ trợ đăng ký/đăng nhập JWT, băm mật khẩu và bảo vệ API bằng mã thông báo.
 
-Because the existing API has no cascade-delete or transaction endpoint, the frontend removes dependent Outfit Item links before deleting a Clothing/Outfit record and attempts to restore links if a later request fails. This sequence is not atomic; if restoration also fails, refresh the affected views and verify the relationships before retrying.
+## Cấu trúc hệ thống
 
-## How to Run Backend
+```text
+React + Vite
+    │
+    ├── /api → Express → MariaDB
+    │
+    └── (chưa tích hợp đăng nhập)
 
-Ensure MariaDB is running, then from the repository root:
+NestJS API → TypeORM → MariaDB
+    └── /auth/register, /auth/login và API yêu cầu JWT
+```
+
+Trong quá trình phát triển, Vite chuyển tiếp đường dẫn `/api` đến Express tại `http://127.0.0.1:9000`. Khi triển khai, cần cấu hình máy chủ chuyển tiếp cùng nguồn đến Express vì Express hiện chưa bật CORS.
+
+## Cấu trúc thư mục
+
+```text
+frontend/
+├── src/components/   # Thành phần giao diện dùng lại
+├── src/hooks/        # Hook tải và quản lý trạng thái dữ liệu
+├── src/layouts/      # Bố cục trang công khai và trang ứng dụng
+├── src/pages/        # Các trang giao diện
+├── src/services/     # Gọi API và định nghĩa kiểu dữ liệu
+└── src/App.tsx       # Khai báo các đường dẫn giao diện
+
+backend/
+├── routes/           # Các tuyến API Express
+├── src/auth/         # Đăng ký, đăng nhập và kiểm tra JWT bằng NestJS
+├── src/user/         # Tài khoản người dùng trong NestJS
+├── src/clothing/     # Quần áo trong NestJS
+├── src/outfit/       # Trang phục trong NestJS
+├── src/outfit-item/  # Các món đồ thuộc trang phục trong NestJS
+└── server.js         # Điểm khởi chạy Express
+
+sql/
+└── digital_wardrobe.sql
+```
+
+## Cơ sở dữ liệu
+
+Cơ sở dữ liệu tên `digital_wardrobe`, gồm năm bảng:
+
+| Bảng | Nội dung |
+|---|---|
+| `users` | Tài khoản người dùng |
+| `categories` | Danh mục quần áo |
+| `clothing` | Các món quần áo |
+| `outfits` | Bộ trang phục |
+| `outfit_items` | Liên kết quần áo với bộ trang phục |
+
+Các liên kết chính:
+
+- Mỗi món quần áo thuộc về một người dùng và một danh mục.
+- Mỗi bộ trang phục thuộc về một người dùng.
+- Mỗi dòng `outfit_items` liên kết một bộ trang phục với một món quần áo.
+
+Tệp tạo cấu trúc cơ sở dữ liệu: [sql/digital_wardrobe.sql](./sql/digital_wardrobe.sql). Với cơ sở dữ liệu có sẵn, xem phần cập nhật cấu trúc email ở dưới trước khi thêm chỉ mục duy nhất.
+
+## Khởi chạy trên máy cá nhân
+
+### 1. Cài đặt cần thiết
+
+Cần có Node.js, npm và MariaDB. Tại thư mục gốc của kho mã, cài các gói:
+
+```bash
+npm --prefix frontend install
+npm --prefix backend install
+```
+
+### 2. Cấu hình Express và cơ sở dữ liệu
+
+Express đọc cấu hình từ tệp `.env` ở thư mục gốc. Sao chép tệp mẫu rồi điền thông tin MariaDB:
+
+```bash
+cp -n .env.example .env
+```
+
+Nếu tệp `.env` đã tồn tại, giữ nguyên tệp đó và chỉ kiểm tra các giá trị cấu hình. Không đưa `.env` lên GitHub và không chia sẻ mật khẩu cơ sở dữ liệu. Trong Codespaces mới, môi trường phát triển có thể đã tạo tệp `.env` với thông tin riêng.
+
+Khởi động MariaDB, sau đó chạy Express từ thư mục gốc:
 
 ```bash
 sudo service mariadb start
 node backend/server.js
 ```
 
-Express defaults to port `9000` and reads database configuration from the root `.env`. A fresh devcontainer creates that ignored file with random local credentials. For manual setup, copy `.env.example` to `.env` and replace the placeholders before starting MariaDB/Express. Do not commit environment files or expose their values.
+Express mặc định dùng cổng `9000`.
 
-## How to Run Frontend
+### 3. Chạy giao diện
 
-In another terminal from the repository root:
+Mở terminal khác tại thư mục gốc:
 
 ```bash
-npm --prefix frontend install
 npm --prefix frontend run dev
 ```
 
-Vite serves the app at `http://localhost:5173`.
+Mở địa chỉ Vite hiển thị trong terminal, thường là `http://localhost:5173`.
 
-## Environment Variables
+### 4. Cấu hình và chạy NestJS
 
-The frontend uses `VITE_API_URL`, defaulting to `/api`. See `frontend/.env.example`; an optional `frontend/.env` is ignored by Git. Frontend variables must not contain database credentials.
+NestJS đọc cấu hình trong `backend/.env`. Tạo tệp từ mẫu:
 
-## NestJS Authentication API
+```bash
+cp -n backend/.env.example backend/.env
+```
 
-The NestJS backend in `backend/src/` now provides public registration and login endpoints and protects its API routes with a JWT bearer-token guard. This NestJS service is separate from the Express API currently used by the frontend; the frontend does not yet have a login screen or send JWTs.
+Nếu `backend/.env` đã tồn tại, không ghi đè; chỉ kiểm tra thông tin MariaDB và `JWT_SECRET`. `JWT_SECRET` phải là chuỗi bí mật dài ít nhất 32 ký tự. Có thể tạo chuỗi ngẫu nhiên bằng:
 
-Start MariaDB, copy `backend/.env.example` to `backend/.env`, set the database credentials, and replace `JWT_SECRET` with a private random value of at least 32 characters. From the repository root, start NestJS with:
+```bash
+openssl rand -base64 48
+```
+
+Đặt kết quả vào `JWT_SECRET` trong `backend/.env`. Không chia sẻ hoặc chụp ảnh để lộ giá trị này. Từ thư mục gốc, chạy:
 
 ```bash
 npm --prefix backend run start:dev
 ```
 
-The NestJS server uses port `3000` by default. Example requests (replace the sample password and token):
+NestJS mặc định dùng cổng `3000`. Khi chạy trên Codespaces, mở thẻ **Ports**, tìm cổng `3000` và dùng địa chỉ được chuyển tiếp thay cho `localhost`.
+
+## API xác thực bằng NestJS
+
+Các tuyến xác thực công khai:
+
+| Phương thức | Đường dẫn | Mô tả |
+|---|---|---|
+| `POST` | `/auth/register` | Tạo tài khoản |
+| `POST` | `/auth/login` | Đăng nhập và nhận JWT |
+
+Các tuyến còn lại của NestJS yêu cầu header `Authorization: Bearer <JWT>`. Token có thời hạn một giờ. Ví dụ:
 
 ```bash
-curl -X POST http://localhost:3000/auth/register \
+curl -i -X POST http://localhost:3000/auth/register \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Wardrobe User","email":"user@example.com","password":"secure-pass-123"}'
+  -d '{"name":"Wardrobe Demo","email":"wardrobe-demo@example.com","password":"demo-pass-123"}'
 
-curl -X POST http://localhost:3000/auth/login \
+curl -i -X POST http://localhost:3000/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"email":"user@example.com","password":"secure-pass-123"}'
-
-curl http://localhost:3000/clothing \
-  -H 'Authorization: Bearer <access_token>'
+  -d '{"email":"wardrobe-demo@example.com","password":"demo-pass-123"}'
 ```
 
-Registration requires a name, valid email and a password of at least 8 characters and no more than 72 UTF-8 bytes. Passwords are stored as bcrypt hashes, duplicate emails are rejected, and responses omit the password. Access tokens expire after one hour; all NestJS endpoints except `/auth/register` and `/auth/login` require `Authorization: Bearer <access_token>`. `GET/PATCH /user/me` only accesses the signed-in user's account. Clothing, outfits and outfit items are also restricted to the owner in the JWT; a request cannot choose another `user_id` or attach another user's clothing to an outfit. Use the screenshot steps below to capture a successful API response and its corresponding database row. Existing accounts with plaintext passwords need a password reset to a bcrypt hash before they can use this login flow; no insecure plaintext fallback is enabled.
+Đăng ký yêu cầu tên, email hợp lệ và mật khẩu dài ít nhất 8 ký tự, không vượt quá 72 byte UTF-8. Mật khẩu được băm bằng bcrypt trước khi lưu; API không trả mật khẩu hoặc mã băm về cho người gọi. Email được chuẩn hóa và không được trùng.
 
-The NestJS CRUD API uses the same database, but it is separate from the Express API described above. Authentication is not yet wired into the Express routes or the React frontend.
+Sau khi đăng nhập, lấy giá trị `access_token` trong phản hồi và dùng nó để gọi API cần bảo vệ:
 
-### Chụp ảnh minh chứng bài tập
+```bash
+curl -i http://localhost:3000/user/me \
+  -H 'Authorization: Bearer <JWT>'
 
-1. Tạo `backend/.env` từ `backend/.env.example`, điền thông tin MariaDB và đặt `JWT_SECRET` riêng dài ít nhất 32 ký tự. Khởi động MariaDB và API bằng `npm --prefix backend run start:dev`.
-2. Mở terminal thứ hai tại thư mục gốc repo, đăng ký một tài khoản thử (đổi email nếu đã tồn tại):
+curl -i http://localhost:3000/clothing \
+  -H 'Authorization: Bearer <JWT>'
+```
 
-   ```bash
-   curl -i -X POST http://localhost:3000/auth/register \
-     -H 'Content-Type: application/json' \
-     -d '{"name":"Wardrobe Demo","email":"wardrobe-demo@example.com","password":"demo-pass-123"}'
-   ```
+`GET/PATCH /user/me` chỉ đọc hoặc sửa tài khoản từ JWT. Quần áo, trang phục và các món trong trang phục được giới hạn theo người dùng đăng nhập. Máy chủ lấy mã người dùng từ JWT, không tin `user_id` do nội dung yêu cầu gửi lên. Khi thêm món vào trang phục, cả trang phục lẫn quần áo phải thuộc về cùng người dùng.
 
-   Chụp ảnh phản hồi `201` có `access_token` và thông tin người dùng. Token là thông tin bí mật; che token trong ảnh trước khi nộp.
+Các tuyến danh mục cũng yêu cầu JWT nhưng danh mục hiện là dữ liệu dùng chung, không gắn quyền sở hữu riêng. API xác thực NestJS hiện hoạt động độc lập với Express và chưa được nối vào giao diện React.
 
-3. Đăng nhập để lấy token mới, thay email/mật khẩu bằng thông tin đã đăng ký:
+Tài khoản cũ lưu mật khẩu dạng văn bản không thể đăng nhập qua cơ chế mới; cần đặt lại mật khẩu để lưu dưới dạng bcrypt. Không có cơ chế dự phòng so sánh mật khẩu văn bản.
 
-   ```bash
-   curl -i -X POST http://localhost:3000/auth/login \
-     -H 'Content-Type: application/json' \
-     -d '{"email":"wardrobe-demo@example.com","password":"demo-pass-123"}'
-   ```
+### Cập nhật cơ sở dữ liệu đã có sẵn
 
-   Chụp ảnh phản hồi `200`. Tiếp theo dùng token đăng nhập để kiểm tra API được bảo vệ (thay `<TOKEN>` bằng token vừa nhận):
-
-   ```bash
-   curl -i http://localhost:3000/user/me \
-     -H 'Authorization: Bearer <TOKEN>'
-
-   curl -i http://localhost:3000/clothing \
-     -H 'Authorization: Bearer <TOKEN>'
-   ```
-
-   Để chụp minh chứng authorization, gọi thử `GET /user/me` không có header token: API phải trả `401 Unauthorized`. Có thể chụp hai kết quả (không token và có token) trong Postman hoặc terminal; không để lộ token trong ảnh.
-
-4. Mở MariaDB client bằng tài khoản local của bạn và chạy truy vấn sau để chụp ảnh hàng user; truy vấn chỉ hiển thị trạng thái mật khẩu đã được băm, không hiển thị hash:
-
-   ```sql
-   SELECT user_id, name, email,
-          CASE WHEN password LIKE '$2%' THEN 'bcrypt hash saved'
-               ELSE 'not bcrypt' END AS password_storage
-   FROM users
-   WHERE email = 'wardrobe-demo@example.com';
-   ```
-
-   Nộp tối thiểu một ảnh API đăng ký/đăng nhập thành công và một ảnh kết quả truy vấn `users`. Nếu dùng ảnh Postman/terminal, đảm bảo ảnh có URL hoặc tên endpoint và status code.
-
-Với database đã tạo trước đó, kiểm tra email trùng trước khi thêm ràng buộc duy nhất:
+Tệp tạo CSDL mới đặt email là duy nhất. Trước khi áp dụng thay đổi lên CSDL hiện có, sao lưu CSDL và kiểm tra email trùng:
 
 ```sql
 SELECT LOWER(email) AS normalized_email, COUNT(*) AS total
 FROM users
 GROUP BY LOWER(email)
 HAVING COUNT(*) > 1;
+```
 
+Chỉ khi truy vấn không trả về dòng nào mới thêm chỉ mục:
+
+```sql
 ALTER TABLE users ADD UNIQUE KEY uq_users_email (email);
 ```
 
-Chỉ chạy lệnh `ALTER TABLE` khi truy vấn đầu không trả về dòng nào; sao lưu DB trước khi thay đổi schema. Database mới sẽ nhận ràng buộc này từ `sql/digital_wardrobe.sql`.
+## Chụp ảnh minh chứng nộp bài
 
-## Testing
+Cần nộp tối thiểu ảnh API hoạt động thành công và ảnh dữ liệu đã được lưu trong CSDL. Nên chụp thêm ảnh chứng minh API từ chối yêu cầu không có token.
 
-| Check | Result |
+### Ảnh API bằng Postman
+
+1. Khởi chạy NestJS theo phần hướng dẫn bên trên. Mở Postman và tạo yêu cầu `POST` tới `http://localhost:3000/auth/register`.
+2. Chọn **Body → raw → JSON**, nhập:
+
+   ```json
+   {
+     "name": "Wardrobe Demo",
+     "email": "wardrobe-demo@example.com",
+     "password": "demo-pass-123"
+   }
+   ```
+
+3. Bấm **Send**. Đăng ký thành công trả mã `201`. Nếu email đã tồn tại, đổi sang email khác.
+
+4. Tạo yêu cầu `POST http://localhost:3000/auth/login`, chọn **Body → raw → JSON** và nhập:
+
+   ```json
+   {
+     "email": "wardrobe-demo@example.com",
+     "password": "demo-pass-123"
+   }
+   ```
+
+   Đăng nhập thành công trả mã `200` cùng `access_token`.
+
+5. Tạo yêu cầu `GET http://localhost:3000/user/me`. Gửi một lần không có token để kiểm tra phản hồi `401 Unauthorized`. Sau đó chọn **Authorization → Bearer Token**, dán token và gửi lại; kết quả thành công là `200 OK`.
+
+### Ảnh dữ liệu MariaDB
+
+Sau khi đăng nhập MariaDB và chạy truy vấn ở bước tiếp theo, chụp ảnh phần truy vấn cùng hàng kết quả. Không đưa mật khẩu, JWT hoặc mã băm mật khẩu vào ảnh nộp.
+
+## Kiểm thử và kiểm tra
+
+Các kiểm tra gần nhất cho NestJS:
+
+| Kiểm tra | Kết quả |
 |---|---|
-| GET API | PASS |
-| POST | PASS through forms/API for Categories, Clothing, Outfits and Outfit Items |
-| PUT/PATCH | PASS through forms/API for Categories, Clothing and Outfits; Express uses PUT, not PATCH |
-| DELETE | PASS through forms/API for Categories, Clothing, Outfits and Outfit Items; temporary records removed and counts restored |
-| Form validation | PASS: required fields, owner/category selection and invalid image URL blocked without writes |
-| Responsive | PASS: Home, About and four management pages checked at desktop, tablet and mobile widths; Clothing/Category modals fit; no horizontal overflow |
-| Lint | PASS: `npm --prefix frontend run lint` |
-| Build | PASS: `npm --prefix frontend run build` |
-| Backend build/lint | PASS: `npm --prefix backend run build` and `npm --prefix backend run lint` |
-| Console/network | PASS: no console/page errors, failed requests or HTTP errors in production-preview route checks |
+| Biên dịch NestJS | Đạt |
+| Kiểm tra mã nguồn NestJS | Đạt |
+| Kiểm thử tự động NestJS | 13 nhóm kiểm thử, 18 kiểm thử đạt |
 
-CRUD was tested through both the UI and API using temporary records. The API test IDs were Category `3`, Clothing `2`, Outfits `2` and `3`, and Outfit Item `14`; UI CRUD used separately named temporary rows. Clothing and Outfit deletes were also tested with dependent Outfit Items. All test rows were deleted, and collection counts matched their pre-test values. The database currently has 1 user, 2 categories, 1 clothing item, 1 outfit and 11 outfit-item rows.
+Các giao diện và thao tác CRUD của ứng dụng Express/React cũng đã được kiểm tra trước đó bằng dữ liệu tạm thời; các dữ liệu kiểm thử đã được xóa sau khi kiểm tra. Để chạy lệnh kiểm tra:
 
-Run the built app locally with `npm --prefix frontend run preview` after building. Production hosting still needs an `/api` reverse proxy to Express.
+```bash
+npm --prefix backend run build
+npm --prefix backend run lint
+npm --prefix backend test -- --runInBand
 
-## Project Notes
-
-### Backend Structure
-
-The frontend target is the Express application started by `backend/server.js`, with resource handlers in `backend/routes/` and the MariaDB pool in `backend/dbconnection.js`. `backend/src/` contains a separate NestJS/TypeORM scaffold and is not the API target used by the frontend. The root README's legacy CRUD screenshots document the Express routes.
-
-### Database
-
-The `digital_wardrobe` MariaDB schema is defined in `sql/digital_wardrobe.sql` and contains `users`, `categories`, `clothing`, `outfits` and `outfit_items`. Foreign keys connect clothing to users/categories and outfit items to outfits/clothing. The UI respects these relationships when deleting linked records; no schema changes were made.
-
-The former fixed local bootstrap credential was removed from current source and appears in Git-history commit `6483a86f6abf`; history was not rewritten. The active local MariaDB account has been rotated to a random credential, and both ignored `.env` files are synchronized with owner-only permissions. Anyone with another clone should rotate their own local account independently. Fresh devcontainers generate random credentials. Runtime `.env` files are ignored and must not be committed.
-
-## Quy trình bài tập nhóm
-
-### ① Phân tích bài tập nhóm
-
-**Phát triển:**  
-Xây dựng hệ thống **Digital Wardrobe** để quản lý tủ quần áo và các bộ trang phục.
-
-**Objects / Table:**
-
-| Object | Table |
-|---|---|
-| User | `users` |
-| Category | `categories` |
-| Clothing | `clothing` |
-| Outfit | `outfits` |
-| Outfit Item | `outfit_items` |
-
-**Các đối tượng cần quản lý:**
-
-- Người dùng
-- Danh mục quần áo
-- Quần áo
-- Bộ trang phục
-- Các món quần áo trong bộ trang phục
-
----
-
-### ② SQL
-
-**Database:** `digital_wardrobe`  
-**DBMS:** MariaDB
-
-**Các Table:**
-
-- `users`
-- `categories`
-- `clothing`
-- `outfits`
-- `outfit_items`
-
-**Khóa chính / khóa ngoại:**
-
-| Table | Primary Key | Foreign Key |
-|---|---|---|
-| `users` | `user_id` | — |
-| `categories` | `category_id` | — |
-| `clothing` | `clothing_id` | `user_id`, `category_id` |
-| `outfits` | `outfit_id` | `user_id` |
-| `outfit_items` | `outfit_item_id` | `outfit_id`, `clothing_id` |
-
-**SQL file:** sql/digital_wardrobe.sql
-
----
-
-### ③ Hệ quản trị CSDL
-
-**DBMS:** MariaDB
-
-**Database:** `digital_wardrobe`
-
-Database gồm 5 bảng:
-
-- `users`
-- `categories`
-- `clothing`
-- `outfits`
-- `outfit_items`
-
-**Ảnh minh chứng:**
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 11 27 22" src="https://github.com/user-attachments/assets/3b0c9ea6-acba-4614-8598-7b8eb090c580" />
-
----
-
-### ④ Kết nối CSDL
-
-Backend sử dụng Node.js để kết nối với MariaDB.
-
-**File kết nối:** backend/dbconnection.js
-
-**Thông tin kết nối:**
-
-- Host
-- Username
-- Password
-- Port
-- Database
-- SSL
-
-Sử dụng:
-
-- `mariadb`
-- `dotenv`
-- Connection Pool
-
-**Ảnh minh chứng:**
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 11 28 53" src="https://github.com/user-attachments/assets/5f98d494-3bb9-4851-9c38-e4e7b118abdd" />
-
----
-
-### ⑤ Backend – CRUD
-
-Backend sử dụng **Node.js + Express.js**.
-
-CRUD được thực hiện cho 5 Object:
-
-| Object | GET | POST | PUT | DELETE |
-|---|---|---|---|---|
-| Users | ✓ | ✓ | ✓ | ✓ |
-| Categories | ✓ | ✓ | ✓ | ✓ |
-| Clothing | ✓ | ✓ | ✓ | ✓ |
-| Outfits | ✓ | ✓ | ✓ | ✓ |
-| Outfit Items | ✓ | ✓ | ✓ | ✓ |
-
-**CRUD:**
-
-- Create → POST
-- Read → GET
-- Update → PUT
-- Delete → DELETE
-
-**Các file CRUD:**
-
-```text
-backend/routes/
-├── users.js
-├── categories.js
-├── clothing.js
-├── outfits.js
-└── outfitItems.js
+npm --prefix frontend run lint
+npm --prefix frontend run build
 ```
-**Ảnh minh chứng:**
 
-### CRUD cho Users
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 20 52" src="https://github.com/user-attachments/assets/0bd90bd4-b520-420a-8e78-5da1d72a89c4" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 21 11" src="https://github.com/user-attachments/assets/a5639efc-e5a2-462c-9faf-c21e0901db6a" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 21 21" src="https://github.com/user-attachments/assets/3a84ac70-4365-44c2-a2ea-b7895b9e2110" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 21 28" src="https://github.com/user-attachments/assets/d803af14-9f66-4433-a675-bc2c25b75fc1" />
+## Giới hạn hiện tại
 
-### CRUD cho Categories
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 22 26" src="https://github.com/user-attachments/assets/83bb3332-492c-40af-b44b-24e74286bc41" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 25 43" src="https://github.com/user-attachments/assets/dace1472-6559-4ec4-a199-88e10df24e1e" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 26 30" src="https://github.com/user-attachments/assets/b3233d84-10c2-4625-8df7-e1103b42f979" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 27 11" src="https://github.com/user-attachments/assets/4b509a51-2812-4309-979a-c1014db24a2d" />
+- Giao diện React đang gọi API Express; chưa có màn hình đăng nhập và chưa gửi JWT.
+- NestJS cung cấp API xác thực riêng; các đường dẫn CRUD và quy tắc phân quyền trong NestJS không tự động áp dụng cho Express.
+- Danh mục là dữ liệu dùng chung; chưa có phân quyền theo vai trò quản trị.
+- Việc xóa quần áo hoặc trang phục có liên kết trong ứng dụng hiện cần xử lý các dòng liên kết trước. Chuỗi thao tác của giao diện không phải một giao dịch nguyên tử; nếu khôi phục liên kết sau lỗi cũng thất bại, cần kiểm tra lại dữ liệu trước khi thử lại.
+- API Express hiện chưa có tải ảnh lên, bộ lọc theo mùa/loại trang phục hoặc lọc dữ liệu theo người dùng.
 
-### CRUD cho Clothing
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 34 15" src="https://github.com/user-attachments/assets/f485028d-d32d-499f-9ba1-bf4aa2da01f1" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 35 30" src="https://github.com/user-attachments/assets/76ce03e3-e08a-4cff-9deb-ac02bda33c68" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 36 04" src="https://github.com/user-attachments/assets/a51c362b-c84d-416e-a371-60080f518ccc" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 36 31" src="https://github.com/user-attachments/assets/4d678585-e96f-477a-b14f-980ad6850d72" />
+## Minh chứng các phần đã thực hiện
 
-### CRUD cho Outfits
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 38 18" src="https://github.com/user-attachments/assets/0c57b179-ccc2-4e32-b0e5-abd4a66e852e" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 38 23" src="https://github.com/user-attachments/assets/aa53fda8-3e20-40c5-a2a4-dff794dde0a1" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 38 31" src="https://github.com/user-attachments/assets/c9ddd795-6fe2-41ef-ac2d-6302947ddd14" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 38 40" src="https://github.com/user-attachments/assets/b976c885-a082-4a73-b751-d5477d32eec1" />
+Các ảnh bên dưới là minh chứng giao diện và thao tác quản lý dữ liệu đã có trong dự án.
 
-### CRUD cho Outfit Items
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 40 48" src="https://github.com/user-attachments/assets/cc707c97-28e8-45a9-bfc5-7788d6f2b918" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 40 52" src="https://github.com/user-attachments/assets/a063e281-a2db-4ce8-bde4-8db302d8a2af" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 40 58" src="https://github.com/user-attachments/assets/f27bb61f-07b5-4664-b9a8-7d708bdb5d4d" />
-<img width="1440" height="900" alt="Ảnh màn hình 2026-09-14 lúc 12 41 02" src="https://github.com/user-attachments/assets/939a5f04-a686-499c-9fd3-80f0a82ea519" />
+### Cơ sở dữ liệu
 
-**GitHub Repository:** https://github.com/Whales88888/Digital-Wardrobe-Group
+<img width="1440" height="900" alt="Ảnh chụp cơ sở dữ liệu" src="https://github.com/user-attachments/assets/3b0c9ea6-acba-4614-8598-7b8eb090c580" />
+
+### Kết nối cơ sở dữ liệu
+
+<img width="1440" height="900" alt="Ảnh chụp kết nối cơ sở dữ liệu" src="https://github.com/user-attachments/assets/5f98d494-3bb9-4851-9c38-e4e7b118abdd" />
+
+### Quản lý người dùng
+
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý người dùng 1" src="https://github.com/user-attachments/assets/0bd90bd4-b520-420a-8e78-5da1d72a89c4" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý người dùng 2" src="https://github.com/user-attachments/assets/a5639efc-e5a2-462c-9faf-c21e0901db6a" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý người dùng 3" src="https://github.com/user-attachments/assets/3a84ac70-4365-44c2-a2ea-b7895b9e2110" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý người dùng 4" src="https://github.com/user-attachments/assets/d803af14-9f66-4433-a675-bc2c25b75fc1" />
+
+### Quản lý danh mục
+
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý danh mục 1" src="https://github.com/user-attachments/assets/83bb3332-492c-40af-b44b-24e74286bc41" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý danh mục 2" src="https://github.com/user-attachments/assets/dace1472-6559-4ec4-a199-88e10df24e1e" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý danh mục 3" src="https://github.com/user-attachments/assets/b3233d84-10c2-4625-8df7-e1103b42f979" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý danh mục 4" src="https://github.com/user-attachments/assets/4b509a51-2812-4309-979a-c1014db24a2d" />
+
+### Quản lý quần áo
+
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý quần áo 1" src="https://github.com/user-attachments/assets/f485028d-d32d-499f-9ba1-bf4aa2da01f1" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý quần áo 2" src="https://github.com/user-attachments/assets/76ce03e3-e08a-4cff-9deb-ac02bda33c68" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý quần áo 3" src="https://github.com/user-attachments/assets/a51c362b-c84d-416e-a371-60080f518ccc" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý quần áo 4" src="https://github.com/user-attachments/assets/4d678585-e96f-477a-b14f-980ad6850d72" />
+
+### Quản lý trang phục
+
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý trang phục 1" src="https://github.com/user-attachments/assets/0c57b179-ccc2-4e32-b0e5-abd4a66e852e" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý trang phục 2" src="https://github.com/user-attachments/assets/aa53fda8-3e20-40c5-a2a4-dff794dde0a1" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý trang phục 3" src="https://github.com/user-attachments/assets/c9ddd795-6fe2-41ef-ac2d-6302947ddd14" />
+<img width="1440" height="900" alt="Ảnh minh chứng quản lý trang phục 4" src="https://github.com/user-attachments/assets/b976c885-a082-4a73-b751-d5477d32eec1" />
+
+### Quản lý các món đồ trong trang phục
+
+<img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 1" src="https://github.com/user-attachments/assets/cc707c97-28e8-45a9-bfc5-7788d6f2b918" />
+<img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 2" src="https://github.com/user-attachments/assets/a063e281-a2db-4ce8-bde4-8db302d8a2af" />
+<img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 3" src="https://github.com/user-attachments/assets/f27bb61f-07b5-4664-b9a8-7d708bdb5d4d" />
+<img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 4" src="https://github.com/user-attachments/assets/939a5f04-a686-499c-9fd3-80f0a82ea519" />
+
+## Thông tin kho mã
+
+[Mã nguồn trên GitHub](https://github.com/Whales88888/Digital-Wardrobe-Group)
