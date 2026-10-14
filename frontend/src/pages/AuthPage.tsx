@@ -49,7 +49,13 @@ export default function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       <form onSubmit={submit}>
         {isRegister && <label className="form-field"><span>Name</span><input name="name" autoComplete="name" maxLength={100} required /></label>}
         <label className="form-field"><span>Email</span><input name="email" type="email" autoComplete="email" required /></label>
-        <label className="form-field"><span>Password</span><input name="password" type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} minLength={isRegister ? 8 : undefined} maxLength={72} required /></label>
+        <label className="form-field">
+          <div className="form-field-header">
+            <span>Password</span>
+            {!isRegister && <Link to="/forgot-password" className="auth-forgot-link">Forgot password?</Link>}
+          </div>
+          <input name="password" type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} minLength={isRegister ? 8 : undefined} maxLength={72} required />
+        </label>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="button-primary auth-submit" type="submit" disabled={busy}>{busy ? 'Please wait…' : isRegister ? 'Create account' : 'Sign in'}</button>
       </form>

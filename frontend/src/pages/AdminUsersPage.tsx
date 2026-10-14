@@ -1,37 +1,43 @@
 import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
+import ConfirmModal from '../components/ConfirmModal'
 import { ErrorState, LoadingState, PageHeading } from '../components/States'
+import { useToast } from '../context'
 import { useResource } from '../hooks/useResource'
 import { adminUsersApi } from '../services/wardrobe'
 
 export default function AdminUsersPage() {
   const { user } = useAuth()
   const [page, setPage] = useState(1)
-  const [message, setMessage] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const toast = useToast()
   const resource = useResource(['admin-users', page], () => adminUsersApi.list(page))
 
   async function updateRole(id: number, role: 'user' | 'admin') {
-    setMessage('')
     try {
       await adminUsersApi.changeRole(id, role)
-      setMessage('User role updated.')
+      toast.success('User role updated successfully.')
       resource.retry()
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : 'Could not update the role.')
+      toast.error(reason instanceof Error ? reason.message : 'Could not update the role.')
     }
   }
 
-  async function removeUser(id: number, name: string) {
-    if (!window.confirm(`Permanently delete ${name} and all data in that account?`)) return
-    setMessage('')
+  async function executeRemoveUser() {
+    if (!deleteTarget) return
+    setBusy(true)
     try {
-      await adminUsersApi.remove(id)
-      setMessage('User and associated data deleted.')
+      await adminUsersApi.remove(deleteTarget.id)
+      toast.success(`User ${deleteTarget.name} and associated data deleted.`)
+      setDeleteTarget(null)
       if (resource.data?.items.length === 1 && page > 1) setPage(page - 1)
       else resource.retry()
     } catch (reason) {
-      setMessage(reason instanceof Error ? reason.message : 'Could not delete the user.')
+      toast.error(reason instanceof Error ? reason.message : 'Could not delete the user.')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -41,7 +47,6 @@ export default function AdminUsersPage() {
 
   return <>
     <PageHeading eyebrow="Administration" title="Manage users" description="Review accounts, assign roles, and remove accounts with their associated wardrobe data." />
-    {message && <p className="feedback" role="status">{message}</p>}
     {resource.loading
       ? <LoadingState label="Loading accounts" />
       : resource.error
@@ -51,7 +56,7 @@ export default function AdminUsersPage() {
             {(resource.data?.items ?? []).map((account) => <article className="admin-user-row" key={account.user_id}>
               <div><strong>{account.name}</strong><span>{account.email}</span><small>Account #{account.user_id}</small></div>
               <label className="filter-control"><span className="sr-only">Role for {account.name}</span><select value={account.role} disabled={account.user_id === user.user_id} onChange={(event) => void updateRole(account.user_id, event.target.value === 'admin' ? 'admin' : 'user')}><option value="user">User</option><option value="admin">Admin</option></select></label>
-              <button className="icon-button button-danger" type="button" aria-label={`Delete ${account.name}`} disabled={account.user_id === user.user_id} onClick={() => void removeUser(account.user_id, account.name)}><Trash2 size={16} /></button>
+              <button className="icon-button button-danger" type="button" aria-label={`Delete ${account.name}`} disabled={account.user_id === user.user_id} onClick={() => setDeleteTarget({ id: account.user_id, name: account.name })}><Trash2 size={16} /></button>
             </article>)}
           </div>
           {resource.data && resource.data.total_pages > 1 && <nav className="pagination-controls" aria-label="User pages">
@@ -60,5 +65,14 @@ export default function AdminUsersPage() {
             <button className="button-secondary button-small" type="button" disabled={page >= resource.data.total_pages} onClick={() => setPage(page + 1)}>Next</button>
           </nav>}
         </>}
+    <ConfirmModal
+      isOpen={Boolean(deleteTarget)}
+      title={`Delete user “${deleteTarget?.name}”?`}
+      message="This will permanently delete this user account and cascade-delete all their wardrobe data."
+      confirmText="Delete account"
+      busy={busy}
+      onClose={() => setDeleteTarget(null)}
+      onConfirm={() => void executeRemoveUser()}
+    />
   </>
 }

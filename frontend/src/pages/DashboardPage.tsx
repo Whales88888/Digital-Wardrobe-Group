@@ -11,10 +11,13 @@ function formatDate(value: string): string {
   })
 }
 
+import { useToast } from '../context'
+
 export default function DashboardPage() {
   const dashboard = useResource(['activity', 'dashboard'], activityApi.dashboard)
   const outfits = useResource(['outfits'], outfitsApi.list)
   const [feedback, setFeedback] = useState<{ message: string; error: boolean } | null>(null)
+  const toast = useToast()
   const sources = [dashboard, outfits]
   const loading = sources.some((source) => source.loading)
   const error = sources.find((source) => source.error)?.error
@@ -27,10 +30,14 @@ export default function DashboardPage() {
       const now = new Date()
       const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
       await activityApi.updateCare(clothingId, { last_washed_at: date })
-      setFeedback({ message: 'Care log updated; the wash reminder has been reset.', error: false })
+      const msg = 'Care log updated; the wash reminder has been reset.'
+      setFeedback({ message: msg, error: false })
+      toast.success(msg)
       dashboard.retry()
     } catch (reason) {
-      setFeedback({ message: reason instanceof Error ? reason.message : 'Could not update the care log.', error: true })
+      const msg = reason instanceof Error ? reason.message : 'Could not update the care log.'
+      setFeedback({ message: msg, error: true })
+      toast.error(msg)
     }
   }
 
