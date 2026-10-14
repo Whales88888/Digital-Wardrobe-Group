@@ -129,6 +129,7 @@ Các endpoint dữ liệu yêu cầu cookie đăng nhập. Prefix `/api` là c�
 - Đổi mật khẩu yêu cầu xác minh mật khẩu hiện tại, băm mật khẩu mới và thu hồi mọi phiên đang hoạt động.
 - JWT phiên được đặt trong cookie `HttpOnly`, `SameSite=Lax`, `Secure` ở production; thời hạn 15 phút.
 - JWT chứa session ID; server kiểm tra session còn hiệu lực trong database cho request được bảo vệ. Logout thu hồi session ở server.
+- Đăng nhập và đăng ký giới hạn 5 lần/phút cho mỗi IP; vượt giới hạn trả HTTP `429`. Bộ đếm dùng storage trong bộ nhớ của tiến trình, nên triển khai nhiều API replicas cần chuyển sang storage dùng chung.
 - Cookie flags, HTTPS và khả năng thu hồi phiên giảm rủi ro chiếm dụng/tái sử dụng phiên; `HttpOnly` không bảo vệ thiết bị hoặc trình duyệt đã bị xâm nhập.
 - CSRF guard yêu cầu `X-Wardrobe-Request: 1` với request thay đổi dữ liệu.
 - Vai trò `admin` giới hạn quyền sửa danh mục.
@@ -136,7 +137,7 @@ Các endpoint dữ liệu yêu cầu cookie đăng nhập. Prefix `/api` là c�
 - Ảnh lưu local theo user trong development; route đọc ảnh yêu cầu session và kiểm tra đúng chủ sở hữu. Production cần cấu hình Cloudinary; URL Cloudinary hiện không phải signed/private delivery.
 - Thông báo lỗi máy chủ không trả stack trace/database detail cho trình duyệt.
 
-Đây là biện pháp hiện có, không phải chứng nhận bảo mật. Trước production cần cân nhắc rate limit đăng nhập, quy trình đặt lại mật khẩu và quản lý admin an toàn.
+Đây là biện pháp hiện có, không phải chứng nhận bảo mật. Trước production cần bổ sung quy trình đặt lại mật khẩu và quản lý admin an toàn; nếu chạy nhiều API replicas, cần dùng storage rate-limit dùng chung.
 
 ## 7. Luật – Đạo đức – Nghề nghiệp
 
@@ -194,13 +195,13 @@ npm test
 npm run build
 ```
 
-Kiểm tra gần nhất: lint và build thành công; backend unit tests **18 suites / 49 tests**, frontend **1 test file / 7 tests**, và HTTP integration tests **3 tests** đều đạt. HTTP integration tests kiểm tra CSRF, validation payload và ràng buộc chủ sở hữu với repository giả lập; chưa thay thế browser E2E hoặc kiểm thử MariaDB thật. CI chạy lint, unit tests, HTTP integration tests và build qua GitHub Actions.
+Kiểm tra gần nhất: lint và build thành công; backend unit tests **18 suites / 49 tests**, frontend **1 test file / 7 tests**, và HTTP integration tests **4 tests** đều đạt. HTTP integration tests kiểm tra CSRF, validation payload, ràng buộc chủ sở hữu và giới hạn đăng nhập với repository giả lập; chưa thay thế browser E2E hoặc kiểm thử MariaDB thật. CI chạy lint, unit tests, HTTP integration tests và build qua GitHub Actions.
 
 ## 10. Giới hạn đã biết
 
 - Gợi ý là heuristic, không dùng AI; lịch chưa gửi thông báo hoặc đồng bộ lịch ngoài.
 - Các danh sách outfit/danh mục chưa phân trang.
-- Chưa có đặt lại mật khẩu, rate limit đăng nhập, giao diện quản trị tài khoản hoặc browser E2E tests.
+- Chưa có đặt lại mật khẩu, giao diện quản trị tài khoản hoặc browser E2E tests.
 - Production cần cấu hình Cloudinary; ảnh chưa có signed/private delivery và asset chưa tự xóa khi xóa món đồ.
 
 ## 11. Tài liệu tham khảo

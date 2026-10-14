@@ -1,6 +1,14 @@
-import { CanActivate, ExecutionContext, INestApplication } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  INestApplication,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { ThrottlerModule } from '@nestjs/throttler';
 import request from 'supertest';
+import { AuthController } from '../src/auth/auth.controller';
+import { AuthService } from '../src/auth/auth.service';
 import { ClothingController } from '../src/clothing/clothing.controller';
 import { ClothingService } from '../src/clothing/clothing.service';
 import { ImageStorageService } from '../src/clothing/image-storage.service';
@@ -43,10 +51,20 @@ describe('Wardrobe API (HTTP integration)', () => {
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
-      controllers: [ClothingController, OutfitController],
+      controllers: [AuthController, ClothingController, OutfitController],
+      imports: [ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }])],
       providers: [
         ClothingService,
         OutfitService,
+        {
+          provide: AuthService,
+          useValue: {
+            login: jest.fn().mockRejectedValue(
+              new UnauthorizedException('Invalid email or password'),
+            ),
+            register: jest.fn(),
+          },
+        },
         { provide: 'CLOTHING_REPOSITORY', useValue: clothingRepository },
         { provide: 'OUTFIT_REPOSITORY', useValue: outfitRepository },
         { provide: ImageStorageService, useValue: {} },
@@ -113,5 +131,21 @@ describe('Wardrobe API (HTTP integration)', () => {
       .expect(400);
 
     expect(outfitRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('limits login attempts to five per minute from the same IP', async () => {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .set('X-Wardrobe-Request', '1')
+        .send({ email: 'test@example.com', password: 'wrong-password' })
+        .expect(401);
+    }
+
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .set('X-Wardrobe-Request', '1')
+      .send({ email: 'test@example.com', password: 'wrong-password' })
+      .expect(429);
   });
 });

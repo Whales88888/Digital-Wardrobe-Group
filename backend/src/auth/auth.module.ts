@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { UserModule } from '../user/user.module';
 import { DatabaseModule } from '../database/database.module';
 import { AuthController } from './auth.controller';
@@ -13,6 +14,7 @@ import { CsrfGuard } from './csrf.guard';
   imports: [
     DatabaseModule,
     UserModule,
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }]),
     JwtModule.registerAsync({
       useFactory: () => {
         const secret = process.env.JWT_SECRET;
