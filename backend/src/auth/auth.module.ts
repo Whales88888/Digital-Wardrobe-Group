@@ -2,12 +2,16 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from '../user/user.module';
+import { DatabaseModule } from '../database/database.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from './roles.guard';
+import { CsrfGuard } from './csrf.guard';
 
 @Module({
   imports: [
+    DatabaseModule,
     UserModule,
     JwtModule.registerAsync({
       useFactory: () => {
@@ -17,7 +21,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
         }
         return {
           secret,
-          signOptions: { expiresIn: '1h' },
+          signOptions: { expiresIn: '15m' },
         };
       },
     }),
@@ -26,7 +30,11 @@ import { JwtAuthGuard } from './jwt-auth.guard';
   providers: [
     AuthService,
     JwtAuthGuard,
+    RolesGuard,
+    CsrfGuard,
     { provide: APP_GUARD, useExisting: JwtAuthGuard },
+    { provide: APP_GUARD, useExisting: RolesGuard },
+    { provide: APP_GUARD, useExisting: CsrfGuard },
   ],
   exports: [AuthService],
 })

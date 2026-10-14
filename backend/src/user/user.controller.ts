@@ -1,8 +1,7 @@
 import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
-import { User } from './user.entity';
-import { UserService } from './user.service';
+import { UserService, type ProfileUpdate } from './user.service';
 
 @Controller('user')
 export class UserController {
@@ -16,7 +15,7 @@ export class UserController {
   @Patch('me')
   updateMe(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() data: Partial<User>,
+    @Body() data: ProfileUpdate,
   ) {
     return this.userService.update(user.sub, data);
   }

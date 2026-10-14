@@ -47,10 +47,10 @@ export class OutfitItemService {
   }
 
   async create(
-    data: Partial<OutfitItem>,
+    data: unknown,
     user_id: number,
   ): Promise<OutfitItem> {
-    const { outfit_item_id: _id, ...fields } = data;
+    const fields = this.parseFields(data);
     if (fields.outfit_id === undefined || fields.clothing_id === undefined) {
       throw new BadRequestException('outfit_id and clothing_id are required');
     }
@@ -62,7 +62,7 @@ export class OutfitItemService {
 
   async update(
     outfit_item_id: number,
-    data: Partial<OutfitItem>,
+    data: unknown,
     user_id: number,
   ): Promise<OutfitItem> {
     const existing = await this.findOne(outfit_item_id, user_id);
@@ -70,7 +70,7 @@ export class OutfitItemService {
       throw new NotFoundException('Outfit item not found');
     }
 
-    const { outfit_item_id: _id, ...fields } = data;
+    const fields = this.parseFields(data);
     if (Object.keys(fields).length === 0) {
       throw new BadRequestException(
         'At least one outfit item field is required',
@@ -113,5 +113,33 @@ export class OutfitItemService {
     if (!outfit || !clothing) {
       throw new NotFoundException('Outfit or clothing not found');
     }
+  }
+
+  private parseFields(data: unknown): Partial<OutfitItem> {
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+      throw new BadRequestException('Outfit item data must be an object');
+    }
+    const { outfit_item_id: _id, ...fields } = data as Record<string, unknown>;
+    const allowedFields = new Set(['outfit_id', 'clothing_id']);
+    const unsupportedField = Object.keys(fields).find(
+      (field) => !allowedFields.has(field),
+    );
+    if (unsupportedField) {
+      throw new BadRequestException(
+        `Unsupported outfit item field: ${unsupportedField}`,
+      );
+    }
+    for (const field of ['outfit_id', 'clothing_id'] as const) {
+      const value = fields[field];
+      if (
+        value !== undefined &&
+        (typeof value !== 'number' ||
+          !Number.isSafeInteger(value) ||
+          value < 1)
+      ) {
+        throw new BadRequestException(`${field} must be a positive integer`);
+      }
+    }
+    return fields as Partial<OutfitItem>;
   }
 }

@@ -1,56 +1,54 @@
 # Digital Wardrobe Frontend
 
-React, TypeScript and Vite frontend for the existing Express/MariaDB application. Wardrobe records come from the repository's REST API; the UI does not use mock business data.
+React, TypeScript, Vite and React Query frontend for the NestJS/MariaDB application. Sign-up and sign-in use an HttpOnly session cookie; the browser includes it on API requests but JavaScript cannot read it. A shared custom resource hook manages loading, errors, cache and retry behavior.
 
 ## Run
 
-Start MariaDB if it is stopped, then run Express from the repository root:
+Use Node.js 24.9 or later. Initialize MariaDB with `sql/digital_wardrobe.sql`, configure `backend/.env` from `backend/.env.example`, and start the backend:
 
 ```bash
-cp -n .env.example .env
-sudo service mariadb start
-node backend/server.js
+npm --prefix backend install
+npm --prefix backend run start:dev
 ```
 
-For a manual setup, replace the `.env` placeholders with unique local credentials first. A fresh devcontainer generates a random ignored `.env` when none exists. The frontend never receives the database password.
-
-In another terminal:
+In another terminal, start the frontend:
 
 ```bash
 npm --prefix frontend install
 npm --prefix frontend run dev
 ```
 
-Vite serves `http://localhost:5173` and proxies `/api` to Express at `http://127.0.0.1:9000`.
+Vite serves `http://localhost:5173` and proxies `/api` to NestJS at `http://127.0.0.1:3000`, removing the `/api` prefix.
 
 ## Routes
 
-- Public: `/`, `/about`
-- Management: `/app/dashboard`, `/app/wardrobe`, `/app/wardrobe/:id`, `/app/categories`, `/app/outfits`
-- Short aliases: `/dashboard`, `/wardrobe`, `/categories`, `/outfits`
+- Public: `/`, `/about`, `/login`, `/register`
+- Protected: `/app/dashboard`, `/app/wardrobe`, `/app/wardrobe/:id`, `/app/categories`, `/app/outfits`
+- Short aliases: `/dashboard`, `/wardrobe`, `/categories`, `/outfits` (redirect to protected pages)
 
 ## Configuration
 
-The API base defaults to `/api`. Set `VITE_API_URL` in an ignored `frontend/.env` to override it; see `.env.example`. Do not put database credentials in frontend variables.
+The API base defaults to `/api`. Set `VITE_API_URL` in an ignored `frontend/.env` to override it; see `.env.example`. Do not put database credentials or JWT secrets in frontend variables.
 
 ## Commands
 
 ```bash
 npm --prefix frontend run lint
+npm --prefix frontend test
 npm --prefix frontend run build
 npm --prefix frontend run preview
 ```
 
-For deployment, configure a same-origin `/api` reverse proxy to Express. The current Express server does not enable CORS.
+For deployment, configure a same-origin `/api` reverse proxy to NestJS and strip the `/api` prefix.
 
 ## API Coverage and Limitations
 
-- Users: `GET /api/users` supplies existing owner IDs for forms. No authentication API is available.
-- Categories: GET, POST, PUT and DELETE.
-- Clothing: GET list/detail, POST, PUT and DELETE.
-- Outfits: GET list/detail, POST, PUT and DELETE.
-- Outfit Items: GET list/detail, POST, PUT and DELETE.
+- Authentication: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/session` and `POST /api/auth/logout`.
+- User profile: `GET` and `PATCH /api/user/me`.
+- Categories: authenticated GET for all users; POST, PATCH and DELETE require the `admin` role.
+- Clothing, outfits and outfit items: authenticated CRUD; clothing and outfits belong to the signed-in user.
+- Clothing upload: authenticated Cloudinary upload for JPEG, PNG and WebP, limited to 5 MB.
+- Clothing filters/pagination: category, season, type; 24 results per page by default and at most 100 per request.
+- Clothing fields: `category_id`, `name`, `color`, `size`, `image_url`, `season` and `clothing_type`.
 
-Clothing fields are `name`, `category_id`, `user_id`, `color`, `size` and `image_url`. Season, timestamps, image upload and per-user authorization are not supported by the current schema/API. See the repository root README for the full architecture and acceptance results.
-
-The Express API has no cascade-delete/transaction endpoint. The frontend removes linked Outfit Items before deleting Clothing or Outfit records and attempts to restore links if a later request fails. This multi-request sequence is not atomic; verify relationships after a reported rollback failure.
+Deletion relies on database foreign-key cascades. Apply the updated SQL schema to new databases or migrate existing foreign keys before relying on cascade behavior.

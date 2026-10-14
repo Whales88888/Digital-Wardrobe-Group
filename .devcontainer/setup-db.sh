@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT_DIR}/.env"
+BACKEND_ENV_FILE="${ROOT_DIR}/backend/.env"
 
 read_env_value() {
 	local requested_key="$1"
@@ -45,7 +46,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
 	DB_PASSWORD="${DB_PASSWORD:-$(openssl rand -hex 32)}"
 
 	umask 077
-	printf 'DB_HOST=%s\nDB_PORT=%s\nDB_USER=%s\nDB_PASSWORD=%s\nDB_NAME=%s\nDB_SSL=false\nPORT=9000\n' \
+	printf 'DB_HOST=%s\nDB_PORT=%s\nDB_USER=%s\nDB_PASSWORD=%s\nDB_NAME=%s\nDB_SSL=false\n' \
 		"$DB_HOST" "$DB_PORT" "$DB_USER" "$DB_PASSWORD" "$DB_NAME" > "$ENV_FILE"
 else
 	DB_HOST="$(read_env_value DB_HOST)"
@@ -81,6 +82,15 @@ if [[ "$DB_USER" == "replace_with_local_user" || "$DB_PASSWORD" == "replace_with
 	exit 1
 fi
 
+if [[ ! -f "$BACKEND_ENV_FILE" ]]; then
+	JWT_SECRET="$(openssl rand -base64 48)"
+	umask 077
+	printf 'DB_HOST=%s\nDB_PORT=%s\nDB_USER=%s\nDB_PASSWORD=%s\nDB_NAME=%s\nPORT=3000\nJWT_SECRET=%s\n' \
+		"$DB_HOST" "$DB_PORT" "$DB_USER" "$DB_PASSWORD" "$DB_NAME" "$JWT_SECRET" > "$BACKEND_ENV_FILE"
+	unset JWT_SECRET
+fi
+chmod 600 "$BACKEND_ENV_FILE"
+
 sql_quote() {
 	local value="$1"
 	value="${value//\\/\\\\}"
@@ -109,7 +119,82 @@ FLUSH PRIVILEGES;
 SQL
 
 if sudo mariadb "$DB_NAME" --batch --skip-column-names -e "SHOW TABLES LIKE 'users';" | grep -qx 'users'; then
-	echo "=== Existing schema detected; skipping import ==="
+	echo "=== Existing schema detected ==="
+	CASCADE_COUNT="$(sudo mariadb "$DB_NAME" --batch --skip-column-names -e "
+		SELECT COUNT(*)
+		FROM information_schema.REFERENTIAL_CONSTRAINTS
+		WHERE CONSTRAINT_SCHEMA = DATABASE()
+			AND DELETE_RULE = 'CASCADE'
+			AND CONSTRAINT_NAME IN (
+				'fk_clothing_user',
+				'fk_outfits_user',
+				'fk_outfit_items_outfit',
+				'fk_outfit_items_clothing'
+			);")"
+	if [[ "$CASCADE_COUNT" == "0" ]]; then
+		echo "=== Adding foreign-key cascades and categories ==="
+		sudo mariadb "$DB_NAME" < "${ROOT_DIR}/sql/migrations/20261014_add_delete_cascades.sql"
+	elif [[ "$CASCADE_COUNT" != "4" ]]; then
+		printf 'The database has a partial cascade migration. Back it up and inspect its foreign keys before continuing.\n' >&2
+		exit 1
+	fi
+	ROLE_COLUMN_COUNT="$(sudo mariadb "$DB_NAME" --batch --skip-column-names -e "
+		SELECT COUNT(*)
+		FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME = 'users'
+			AND COLUMN_NAME = 'role';")"
+	SESSION_TABLE_COUNT="$(sudo mariadb "$DB_NAME" --batch --skip-column-names -e "
+		SELECT COUNT(*)
+		FROM information_schema.TABLES
+		WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME = 'sessions';")"
+	if [[ "$ROLE_COLUMN_COUNT" == "0" && "$SESSION_TABLE_COUNT" == "0" ]]; then
+		echo "=== Adding roles and revocable sessions ==="
+		sudo mariadb "$DB_NAME" < "${ROOT_DIR}/sql/migrations/20261014_add_sessions_and_roles.sql"
+	elif [[ "$ROLE_COLUMN_COUNT" != "1" || "$SESSION_TABLE_COUNT" != "1" ]]; then
+		printf 'The database has a partial roles/session migration. Back it up and inspect its schema before continuing.\n' >&2
+		exit 1
+	fi
+	CLOTHING_FILTER_COLUMN_COUNT="$(sudo mariadb "$DB_NAME" --batch --skip-column-names -e "
+		SELECT COUNT(*)
+		FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME = 'clothing'
+			AND COLUMN_NAME IN ('season', 'clothing_type');")"
+	if [[ "$CLOTHING_FILTER_COLUMN_COUNT" == "0" ]]; then
+		echo "=== Adding clothing season and type fields ==="
+		sudo mariadb "$DB_NAME" < "${ROOT_DIR}/sql/migrations/20261014_add_clothing_filters.sql"
+	elif [[ "$CLOTHING_FILTER_COLUMN_COUNT" != "2" ]]; then
+		printf 'The database has a partial clothing filter migration. Back it up and inspect its columns before continuing.\n' >&2
+		exit 1
+	fi
+	DRESSES_CATEGORY_COUNT="$(sudo mariadb "$DB_NAME" --batch --skip-column-names -e "
+		SELECT COUNT(*)
+		FROM categories
+		WHERE LOWER(TRIM(name)) IN ('dress', 'dresses');")"
+	if [[ "$DRESSES_CATEGORY_COUNT" == "0" ]]; then
+		echo "=== Adding the Dresses category ==="
+		sudo mariadb "$DB_NAME" < "${ROOT_DIR}/sql/migrations/20261014_add_dresses_category.sql"
+	fi
+	CARE_COLUMN_COUNT="$(sudo mariadb "$DB_NAME" --batch --skip-column-names -e "
+		SELECT COUNT(*)
+		FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME = 'clothing'
+			AND COLUMN_NAME IN ('care_instructions', 'last_washed_at', 'wash_after_wears');")"
+	ACTIVITY_TABLE_COUNT="$(sudo mariadb "$DB_NAME" --batch --skip-column-names -e "
+		SELECT COUNT(*)
+		FROM information_schema.TABLES
+		WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME IN ('wear_logs', 'wear_log_items', 'outfit_plans');")"
+	if [[ "$CARE_COLUMN_COUNT" == "0" && "$ACTIVITY_TABLE_COUNT" == "0" ]]; then
+		echo "=== Adding clothing care, wear logs and outfit calendar ==="
+		sudo mariadb "$DB_NAME" < "${ROOT_DIR}/sql/migrations/20261014_add_wardrobe_activity.sql"
+	elif [[ "$CARE_COLUMN_COUNT" != "3" || "$ACTIVITY_TABLE_COUNT" != "3" ]]; then
+		printf 'The database has a partial wardrobe activity migration. Back it up and inspect its schema before continuing.\n' >&2
+		exit 1
+	fi
 else
 	echo "=== Importing database schema ==="
 	sudo mariadb "$DB_NAME" < "${ROOT_DIR}/sql/digital_wardrobe.sql"

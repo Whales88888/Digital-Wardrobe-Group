@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 export interface ResourceState<T> {
   data: T | null
@@ -7,40 +7,15 @@ export interface ResourceState<T> {
   retry: () => void
 }
 
-export function useResource<T>(load: () => Promise<T>): ResourceState<T> {
-  const [state, setState] = useState<Omit<ResourceState<T>, 'retry'>>({
-    data: null,
-    loading: true,
-    error: null,
-  })
-  const [revision, setRevision] = useState(0)
-
-  useEffect(() => {
-    let active = true
-    load()
-      .then((result) => {
-        if (active) setState({ data: result, loading: false, error: null })
-      })
-      .catch((reason: unknown) => {
-        if (active) {
-          setState({
-            data: null,
-            loading: false,
-            error: reason instanceof Error ? reason : new Error('Something went wrong.'),
-          })
-        }
-      })
-
-    return () => {
-      active = false
-    }
-  }, [load, revision])
-
+export function useResource<T>(
+  queryKey: readonly unknown[],
+  load: () => Promise<T>,
+): ResourceState<T> {
+  const query = useQuery({ queryKey, queryFn: load })
   return {
-    ...state,
-    retry: () => {
-      setState((current) => ({ ...current, loading: true, error: null }))
-      setRevision((value) => value + 1)
-    },
+    data: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error instanceof Error ? query.error : query.error ? new Error('Something went wrong.') : null,
+    retry: () => { void query.refetch() },
   }
 }

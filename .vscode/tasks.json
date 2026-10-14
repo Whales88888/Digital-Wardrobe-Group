@@ -1,0 +1,58 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Start wardrobe database",
+			"type": "shell",
+			"command": "sudo",
+			"args": [
+				"service",
+				"mariadb",
+				"start"
+			],
+			"problemMatcher": []
+		},
+		{
+			"label": "Run wardrobe API",
+			"type": "shell",
+			"command": "npm",
+			"args": ["--prefix", "backend", "run", "start:dev"],
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "custom",
+				"pattern": { "regexp": "^$" },
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "Starting compilation in watch mode",
+					"endsPattern": "Nest application successfully started"
+				}
+			}
+		},
+		{
+			"label": "Run wardrobe frontend",
+			"type": "shell",
+			"command": "npm",
+			"args": ["--prefix", "frontend", "run", "dev", "--", "--host", "0.0.0.0"],
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "custom",
+				"pattern": { "regexp": "^$" },
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "vite",
+					"endsPattern": "Local:"
+				}
+			}
+		},
+		{
+			"label": "Run Digital Wardrobe",
+			"dependsOn": [
+				"Start wardrobe database",
+				"Run wardrobe API",
+				"Run wardrobe frontend"
+			],
+			"dependsOrder": "sequence",
+			"problemMatcher": []
+		}
+	]
+}

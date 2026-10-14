@@ -1,289 +1,224 @@
-# Xây dựng phát triển hệ thống quản lý tủ quần áo thông minh
+# Xây dựng và phát triển hệ thống quản lý tủ quần áo thông minh
 
-## Giới thiệu
+Xây dựng ứng dụng web để số hóa tủ quần áo, quản lý outfit, ghi lại lịch sử mặc, lập lịch phối đồ, xem thống kê và nhận gợi ý phối đồ theo luật.
 
-Đồ án xây dựng ứng dụng quản lý tủ quần áo và phối hợp trang phục. Người dùng có thể xem, tìm kiếm, phân loại quần áo; quản lý danh mục; tạo bộ trang phục từ các món đồ trong tủ. Dữ liệu được lưu trong MariaDB và giao diện hiển thị dữ liệu thật từ máy chủ.
+## 1. Mục tiêu và phạm vi
 
-Kho mã hiện có hai phần máy chủ riêng:
+Ứng dụng cho phép người dùng:
 
-- **Express** (`backend/server.js`, `backend/routes/`): API đang được giao diện React sử dụng.
-- **NestJS** (`backend/src/`): ứng dụng riêng có chức năng đăng ký, đăng nhập bằng JWT và giới hạn dữ liệu quần áo/trang phục theo người dùng. Chức năng xác thực hiện chưa nối vào giao diện React hoặc API Express.
+- Đăng ký, đăng nhập và quản lý phiên bằng cookie bảo mật.
+- Quản lý quần áo, danh mục, ảnh, mùa và loại trang phục.
+- Lưu outfit từ các món quần áo trong tủ.
+- Ghi nhật ký món đồ/outfit đã mặc và ghi chú theo ngày.
+- Lên lịch outfit theo ngày và dịp; xem kế hoạch theo tháng.
+- Xem Overview: số món chưa mặc, mức độ sử dụng, phân bố theo danh mục/mùa, lịch sắp tới và nhắc chăm sóc.
+- Nhận gợi ý phối theo mùa, loại, màu và tần suất mặc từ dữ liệu của chính mình.
 
-## Công nghệ sử dụng
+“Thông minh” trong phiên bản này có nghĩa là số hóa, lọc, thống kê và gợi ý theo các quy tắc minh bạch. Hệ thống **không** sử dụng AI/ML, nhận diện hình ảnh hay dự báo thời tiết.
 
-| Thành phần | Công nghệ | Vai trò |
+## 2. Công nghệ
+
+| Lớp | Công nghệ | Vai trò |
 |---|---|---|
-| Giao diện | React, TypeScript, Vite | Hiển thị và tương tác với ứng dụng web |
-| Điều hướng | React Router | Chuyển giữa các trang |
-| API hiện dùng bởi giao diện | Node.js, Express | Nhận và xử lý yêu cầu từ giao diện |
-| API xác thực | NestJS, TypeScript | Đăng ký, đăng nhập và kiểm tra JWT |
-| Cơ sở dữ liệu | MariaDB | Lưu tài khoản, danh mục, quần áo và trang phục |
-| Kết nối cơ sở dữ liệu | MariaDB driver, TypeORM | Đọc/ghi dữ liệu từ máy chủ |
+| Frontend | React 19, TypeScript, Vite | SPA và giao diện responsive |
+| Điều hướng | React Router | Đường dẫn công khai và vùng cần đăng nhập |
+| Gọi API | **Axios**, `async/await` | REST client, cookie credentials, CSRF header, chuẩn hóa lỗi |
+| Server state | TanStack React Query, custom hook `useResource` | Cache, đồng bộ, loading/error/retry |
+| Backend | NestJS 12, TypeScript, Express adapter | REST API theo module, xác thực và xử lý nghiệp vụ |
+| Kiến trúc dữ liệu | TypeORM, MariaDB/MySQL driver | Repository/entity và giao dịch |
+| Lưu ảnh | Filesystem riêng theo user ở development; Cloudinary tùy cấu hình production | Lưu/đọc ảnh |
+| Proxy/triển khai | Vite proxy, Nginx, Docker Compose | Cùng nguồn `/api`, đóng gói dịch vụ |
+| Kiểm thử | Jest, Vitest, ESLint, Oxlint, GitHub Actions | Unit tests, lint, build và CI |
 
-## Chức năng chính
-
-- Trang chủ giới thiệu ứng dụng và hiển thị trước một số quần áo, trang phục từ cơ sở dữ liệu.
-- Bảng điều khiển hiển thị số liệu tổng quan và số lượng theo danh mục.
-- Quản lý quần áo: xem, tìm kiếm, lọc theo danh mục, sắp xếp, xem chi tiết, thêm, sửa và xóa.
-- Quản lý danh mục: xem, lọc, đếm số lượng, thêm, sửa và xóa.
-- Quản lý trang phục và các món quần áo được ghép vào trang phục.
-- Hiển thị trạng thái đang tải, danh sách trống, lỗi và thử tải lại; xác nhận trước khi xóa.
-- Giao diện thích ứng với máy tính, máy tính bảng và điện thoại.
-- NestJS hỗ trợ đăng ký/đăng nhập JWT, băm mật khẩu và bảo vệ API bằng mã thông báo.
-
-## Cấu trúc hệ thống
+## 3. Kiến trúc MVC và Layered Architecture
 
 ```text
-React + Vite
-    │
-    ├── /api → Express → MariaDB
-    │
-    └── (chưa tích hợp đăng nhập)
-
-NestJS API → TypeORM → MariaDB
-    └── /auth/register, /auth/login và API yêu cầu JWT
+Trình duyệt
+ React pages/components → custom hook (React Query) → Axios
+             ↓                    cookie + CSRF
+      Vite proxy / Nginx → NestJS Controller → Service → TypeORM → MariaDB
 ```
 
-Trong quá trình phát triển, Vite chuyển tiếp đường dẫn `/api` đến Express tại `http://127.0.0.1:9000`. Khi triển khai, cần cấu hình máy chủ chuyển tiếp cùng nguồn đến Express vì Express hiện chưa bật CORS.
+Kiến trúc phân lớp tách giao diện, API, nghiệp vụ và truy cập dữ liệu. Theo MVC, React là **View**, entity/dữ liệu cùng quy tắc nghiệp vụ là **Model**, NestJS controller là **Controller**. Backend là REST API theo module, không phải MVC server-rendered.
 
-## Cấu trúc thư mục
+## 4. Cơ sở dữ liệu và CRUD
 
-```text
-frontend/
-├── src/components/   # Thành phần giao diện dùng lại
-├── src/hooks/        # Hook tải và quản lý trạng thái dữ liệu
-├── src/layouts/      # Bố cục trang công khai và trang ứng dụng
-├── src/pages/        # Các trang giao diện
-├── src/services/     # Gọi API và định nghĩa kiểu dữ liệu
-└── src/App.tsx       # Khai báo các đường dẫn giao diện
+### 4.1. Quan hệ đang triển khai
 
-backend/
-├── routes/           # Các tuyến API Express
-├── src/auth/         # Đăng ký, đăng nhập và kiểm tra JWT bằng NestJS
-├── src/user/         # Tài khoản người dùng trong NestJS
-├── src/clothing/     # Quần áo trong NestJS
-├── src/outfit/       # Trang phục trong NestJS
-├── src/outfit-item/  # Các món đồ thuộc trang phục trong NestJS
-└── server.js         # Điểm khởi chạy Express
+Database `digital_wardrobe` dùng MariaDB, gồm chín bảng:
 
-sql/
-└── digital_wardrobe.sql
-```
-
-## Cơ sở dữ liệu
-
-Cơ sở dữ liệu tên `digital_wardrobe`, gồm năm bảng:
-
-| Bảng | Nội dung |
+| Bảng | Vai trò |
 |---|---|
-| `users` | Tài khoản người dùng |
-| `categories` | Danh mục quần áo |
-| `clothing` | Các món quần áo |
-| `outfits` | Bộ trang phục |
-| `outfit_items` | Liên kết quần áo với bộ trang phục |
+| `users` | Tài khoản và vai trò |
+| `sessions` | Phiên có thể thu hồi, thời hạn đăng nhập |
+| `categories` | Danh mục dùng chung |
+| `clothing` | Quần áo theo chủ sở hữu, mùa, loại và thông tin chăm sóc |
+| `outfits` | Outfit thuộc một người dùng |
+| `outfit_items` | Quan hệ nhiều-nhiều giữa outfit và quần áo |
+| `wear_logs` | Nhật ký mặc theo ngày |
+| `wear_log_items` | Các món trong một lần ghi nhật ký |
+| `outfit_plans` | Lịch outfit theo ngày/dịp |
 
-Các liên kết chính:
+Các khóa ngoại bảo vệ tính toàn vẹn; những quan hệ phụ thuộc sử dụng `ON DELETE CASCADE` hoặc `SET NULL` phù hợp. Schema mới ở [sql/digital_wardrobe.sql](./sql/digital_wardrobe.sql); migration cho database cũ ở [sql/migrations/](./sql/migrations).
 
-- Mỗi món quần áo thuộc về một người dùng và một danh mục.
-- Mỗi bộ trang phục thuộc về một người dùng.
-- Mỗi dòng `outfit_items` liên kết một bộ trang phục với một món quần áo.
+```mermaid
+erDiagram
+    USERS ||--o{ SESSIONS : has
+    USERS ||--o{ CLOTHING : owns
+    USERS ||--o{ OUTFITS : owns
+    USERS ||--o{ WEAR_LOGS : records
+    USERS ||--o{ OUTFIT_PLANS : schedules
+    CATEGORIES ||--o{ CLOTHING : classifies
+    OUTFITS ||--o{ OUTFIT_ITEMS : contains
+    CLOTHING ||--o{ OUTFIT_ITEMS : included_in
+    WEAR_LOGS ||--o{ WEAR_LOG_ITEMS : contains
+    CLOTHING ||--o{ WEAR_LOG_ITEMS : worn
+    OUTFITS o|--o{ WEAR_LOGS : worn_as
+    OUTFITS ||--o{ OUTFIT_PLANS : planned
+```
 
-Tệp tạo cấu trúc cơ sở dữ liệu: [sql/digital_wardrobe.sql](./sql/digital_wardrobe.sql). Với cơ sở dữ liệu có sẵn, xem phần cập nhật cấu trúc email ở dưới trước khi thêm chỉ mục duy nhất.
+### 4.2. Lựa chọn mô hình dữ liệu
 
-## Khởi chạy trên máy cá nhân
+MariaDB quan hệ là database duy nhất đang chạy, phù hợp với dữ liệu có quan hệ rõ và cần khóa ngoại/giao dịch. Document NoSQL có thể phù hợp metadata linh hoạt; Graph có thể hỗ trợ gợi ý qua nhiều quan hệ. Hai mô hình sau chỉ được phân tích, **chưa triển khai** vì chưa có nhu cầu đủ lớn để biện minh thêm hệ thống cần đồng bộ và vận hành.
 
-### 1. Cài đặt cần thiết
+### Vai trò người dùng
 
-Cần có Node.js, npm và MariaDB. Tại thư mục gốc của kho mã, cài các gói:
+| Vai trò | Quyền |
+|---|---|
+| Khách | Xem nội dung công khai; đăng ký và đăng nhập |
+| `user` | Quản lý quần áo, outfit, lịch sử mặc, kế hoạch và chăm sóc thuộc tài khoản |
+| `admin` | Có quyền người dùng và quản lý danh mục dùng chung |
+
+Tài khoản đăng ký mới mặc định là `user`. Hiện cấp quyền `admin` qua database; chưa có giao diện quản trị tài khoản.
+
+Để cấp quyền cho tài khoản quản trị đầu tiên, đăng ký tài khoản trước rồi chạy bằng quyền database:
+
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
+```
+
+### 4.3. CRUD
+
+Quần áo, outfit, thành phần outfit, danh mục, nhật ký mặc và kế hoạch đều hỗ trợ CRUD. Hồ sơ hỗ trợ cập nhật tên/email; đổi mật khẩu yêu cầu mật khẩu hiện tại và thu hồi toàn bộ phiên. Thông tin chăm sóc được quản lý cùng món đồ.
+
+## 5. API chính
+
+Các endpoint dữ liệu yêu cầu cookie đăng nhập. Prefix `/api` là cấu hình proxy của frontend; NestJS nhận đường dẫn không có prefix đó.
+
+| Nhóm | Method và route | Mục đích |
+|---|---|---|
+| Auth | `POST /auth/register`, `POST /auth/login` | Tạo tài khoản/phiên, đăng nhập |
+| Auth | `GET /auth/session`, `POST /auth/logout`, `POST /auth/change-password` | Kiểm tra/thu hồi phiên, đổi mật khẩu |
+| Profile | `GET/PATCH /user/me` | Hồ sơ người hiện tại |
+| Quần áo | `GET/POST /clothing`, `GET/PATCH/DELETE /clothing/:id` | CRUD và lọc/phân trang |
+| Ảnh | `POST /clothing/images` | Upload JPEG/PNG/WebP, tối đa 5 MB |
+| Danh mục | `GET /category`, `GET /category/:id` | Đọc danh mục |
+| Danh mục admin | `POST/PATCH/DELETE /category[/:id]` | Thay đổi danh mục |
+| Outfit | `GET/POST /outfit`, `GET/PATCH/DELETE /outfit/:id` | CRUD outfit |
+| Thành phần outfit | `GET/POST /outfit-item`, `GET/PATCH/DELETE /outfit-item/:id` | Ghép món vào outfit |
+| Dashboard/gợi ý | `GET /activity/dashboard`, `GET /activity/recommendations` | Thống kê và gợi ý cá nhân |
+| Nhật ký mặc | `GET/POST /activity/logs`, `PATCH/DELETE /activity/logs/:id` | CRUD lịch sử mặc |
+| Lịch outfit | `GET/POST /activity/plans`, `PATCH/DELETE /activity/plans/:id` | CRUD kế hoạch; GET lọc theo khoảng ngày tối đa 366 ngày |
+| Chăm sóc | `PATCH /activity/clothing/:id/care` | Cập nhật ngày giặt/ngưỡng nhắc/hướng dẫn |
+
+`GET /clothing` hỗ trợ phân trang, tìm kiếm tên/màu/size trên toàn bộ dữ liệu, sắp xếp theo tên/màu, danh mục, mùa và loại (`top`, `bottom`, `outerwear`, `dress`, `shoes`, `accessory`).
+
+## 6. Bảo mật
+
+- Mật khẩu được băm bằng bcrypt; không lưu hoặc ghi log mật khẩu dạng rõ.
+- Đổi mật khẩu yêu cầu xác minh mật khẩu hiện tại, băm mật khẩu mới và thu hồi mọi phiên đang hoạt động.
+- JWT phiên được đặt trong cookie `HttpOnly`, `SameSite=Lax`, `Secure` ở production; thời hạn 15 phút.
+- JWT chứa session ID; server kiểm tra session còn hiệu lực trong database cho request được bảo vệ. Logout thu hồi session ở server.
+- Cookie flags, HTTPS và khả năng thu hồi phiên giảm rủi ro chiếm dụng/tái sử dụng phiên; `HttpOnly` không bảo vệ thiết bị hoặc trình duyệt đã bị xâm nhập.
+- CSRF guard yêu cầu `X-Wardrobe-Request: 1` với request thay đổi dữ liệu.
+- Vai trò `admin` giới hạn quyền sửa danh mục.
+- Service lấy `user_id` từ danh tính đã xác thực, không tin ID chủ sở hữu do client truyền. Outfit và quần áo phải cùng chủ sở hữu khi tạo liên kết.
+- Ảnh lưu local theo user trong development; route đọc ảnh yêu cầu session và kiểm tra đúng chủ sở hữu. Production cần cấu hình Cloudinary; URL Cloudinary hiện không phải signed/private delivery.
+- Thông báo lỗi máy chủ không trả stack trace/database detail cho trình duyệt.
+
+Đây là biện pháp hiện có, không phải chứng nhận bảo mật. Trước production cần cân nhắc rate limit đăng nhập, quy trình đặt lại mật khẩu và quản lý admin an toàn.
+
+## 7. Luật – Đạo đức – Nghề nghiệp
+
+Thiết kế và vận hành cần bảo vệ dữ liệu cá nhân (thu thập tối thiểu, giới hạn truy cập, không đưa mật khẩu/JWT/cookie vào log hoặc ảnh), tôn trọng bản quyền ảnh và thư viện, ghi nhận đóng góp trung thực, mô tả đúng giới hạn sản phẩm và xử lý sự cố có trách nhiệm. Trước khi nộp/triển khai, đối chiếu quy định hiện hành của Việt Nam và quy chế học thuật từ nguồn chính thức. Nội dung này là tổng quan học thuật, không phải tư vấn pháp lý.
+
+## 8. Chạy ứng dụng
+
+### Yêu cầu
+
+- Node.js `>=24.9.0`
+- npm
+- MariaDB
+- Git (để clone dự án)
+
+### Chạy local
 
 ```bash
+git clone https://github.com/Whales88888/Digital-Wardrobe-Group.git
+cd Digital-Wardrobe-Group
 npm --prefix frontend install
 npm --prefix backend install
-```
-
-### 2. Cấu hình Express và cơ sở dữ liệu
-
-Express đọc cấu hình từ tệp `.env` ở thư mục gốc. Sao chép tệp mẫu rồi điền thông tin MariaDB:
-
-```bash
-cp -n .env.example .env
-```
-
-Nếu tệp `.env` đã tồn tại, giữ nguyên tệp đó và chỉ kiểm tra các giá trị cấu hình. Không đưa `.env` lên GitHub và không chia sẻ mật khẩu cơ sở dữ liệu. Trong Codespaces mới, môi trường phát triển có thể đã tạo tệp `.env` với thông tin riêng.
-
-Khởi động MariaDB, sau đó chạy Express từ thư mục gốc:
-
-```bash
 sudo service mariadb start
-node backend/server.js
-```
-
-Express mặc định dùng cổng `9000`.
-
-### 3. Chạy giao diện
-
-Mở terminal khác tại thư mục gốc:
-
-```bash
-npm --prefix frontend run dev
-```
-
-Mở địa chỉ Vite hiển thị trong terminal, thường là `http://localhost:5173`.
-
-### 4. Cấu hình và chạy NestJS
-
-NestJS đọc cấu hình trong `backend/.env`. Tạo tệp từ mẫu:
-
-```bash
+mariadb -u root -p < sql/digital_wardrobe.sql
 cp -n backend/.env.example backend/.env
 ```
 
-Nếu `backend/.env` đã tồn tại, không ghi đè; chỉ kiểm tra thông tin MariaDB và `JWT_SECRET`. `JWT_SECRET` phải là chuỗi bí mật dài ít nhất 32 ký tự. Có thể tạo chuỗi ngẫu nhiên bằng:
-
-```bash
-openssl rand -base64 48
-```
-
-Đặt kết quả vào `JWT_SECRET` trong `backend/.env`. Không chia sẻ hoặc chụp ảnh để lộ giá trị này. Từ thư mục gốc, chạy:
+Điền cấu hình MariaDB và `JWT_SECRET` dài tối thiểu 32 ký tự trong `backend/.env`. Không commit `.env`. Trong terminal riêng:
 
 ```bash
 npm --prefix backend run start:dev
+npm --prefix frontend run dev
 ```
 
-NestJS mặc định dùng cổng `3000`. Khi chạy trên Codespaces, mở thẻ **Ports**, tìm cổng `3000` và dùng địa chỉ được chuyển tiếp thay cho `localhost`.
+Mở URL Vite (thường `http://localhost:5173`). Vite proxy `/api` tới NestJS tại port `3000`. Có thể dùng task VS Code **Run Digital Wardrobe** nếu môi trường đã cấu hình task.
 
-## API xác thực bằng NestJS
+Ảnh development được lưu riêng theo user; production cần cấu hình Cloudinary.
 
-Các tuyến xác thực công khai:
+### Docker Compose
 
-| Phương thức | Đường dẫn | Mô tả |
-|---|---|---|
-| `POST` | `/auth/register` | Tạo tài khoản |
-| `POST` | `/auth/login` | Đăng nhập và nhận JWT |
-
-Các tuyến còn lại của NestJS yêu cầu header `Authorization: Bearer <JWT>`. Token có thời hạn một giờ. Ví dụ:
+Chuẩn bị `.env` gốc và `backend/.env` từ các file mẫu, điền các mật khẩu/secret thật rồi chạy:
 
 ```bash
-curl -i -X POST http://localhost:3000/auth/register \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Wardrobe Demo","email":"wardrobe-demo@example.com","password":"demo-pass-123"}'
-
-curl -i -X POST http://localhost:3000/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"wardrobe-demo@example.com","password":"demo-pass-123"}'
+docker compose up --build -d
 ```
 
-Đăng ký yêu cầu tên, email hợp lệ và mật khẩu dài ít nhất 8 ký tự, không vượt quá 72 byte UTF-8. Mật khẩu được băm bằng bcrypt trước khi lưu; API không trả mật khẩu hoặc mã băm về cho người gọi. Email được chuẩn hóa và không được trùng.
+Ứng dụng phục vụ tại `http://localhost:8080`; MariaDB lưu trong volume. Production cần HTTPS để cookie `Secure` hoạt động.
 
-Sau khi đăng nhập, lấy giá trị `access_token` trong phản hồi và dùng nó để gọi API cần bảo vệ:
+Với database cũ, sao lưu trước rồi áp dụng các migration trong [sql/migrations/](./sql/migrations/) theo thứ tự; không chạy lại migration đã áp dụng.
+
+## 9. Kiểm thử và kiểm tra
 
 ```bash
-curl -i http://localhost:3000/user/me \
-  -H 'Authorization: Bearer <JWT>'
-
-curl -i http://localhost:3000/clothing \
-  -H 'Authorization: Bearer <JWT>'
+npm run lint
+npm test
+npm run build
 ```
 
-`GET/PATCH /user/me` chỉ đọc hoặc sửa tài khoản từ JWT. Quần áo, trang phục và các món trong trang phục được giới hạn theo người dùng đăng nhập. Máy chủ lấy mã người dùng từ JWT, không tin `user_id` do nội dung yêu cầu gửi lên. Khi thêm món vào trang phục, cả trang phục lẫn quần áo phải thuộc về cùng người dùng.
+Kiểm tra gần nhất: lint và build thành công; backend unit tests **18 suites / 49 tests**, frontend **1 test file / 7 tests**, và HTTP integration tests **3 tests** đều đạt. HTTP integration tests kiểm tra CSRF, validation payload và ràng buộc chủ sở hữu với repository giả lập; chưa thay thế browser E2E hoặc kiểm thử MariaDB thật. CI chạy lint, unit tests, HTTP integration tests và build qua GitHub Actions.
 
-Các tuyến danh mục cũng yêu cầu JWT nhưng danh mục hiện là dữ liệu dùng chung, không gắn quyền sở hữu riêng. API xác thực NestJS hiện hoạt động độc lập với Express và chưa được nối vào giao diện React.
+## 10. Giới hạn đã biết
 
-Tài khoản cũ lưu mật khẩu dạng văn bản không thể đăng nhập qua cơ chế mới; cần đặt lại mật khẩu để lưu dưới dạng bcrypt. Không có cơ chế dự phòng so sánh mật khẩu văn bản.
+- Gợi ý là heuristic, không dùng AI; lịch chưa gửi thông báo hoặc đồng bộ lịch ngoài.
+- Các danh sách outfit/danh mục chưa phân trang.
+- Chưa có đặt lại mật khẩu, rate limit đăng nhập, giao diện quản trị tài khoản hoặc browser E2E tests.
+- Production cần cấu hình Cloudinary; ảnh chưa có signed/private delivery và asset chưa tự xóa khi xóa món đồ.
 
-### Cập nhật cơ sở dữ liệu đã có sẵn
+## 11. Tài liệu tham khảo
 
-Tệp tạo CSDL mới đặt email là duy nhất. Trước khi áp dụng thay đổi lên CSDL hiện có, sao lưu CSDL và kiểm tra email trùng:
+1. React và NestJS: https://react.dev/ · https://docs.nestjs.com/
+2. Axios và TanStack Query: https://axios-http.com/docs/intro · https://tanstack.com/query/latest/docs/framework/react/overview
+3. TypeORM và MariaDB: https://typeorm.io/ · https://mariadb.com/kb/en/documentation/
+4. OWASP Authentication, Session Management và CSRF Cheat Sheets: https://cheatsheetseries.owasp.org/
+5. IETF RFC 7519 — JSON Web Token: https://www.rfc-editor.org/rfc/rfc7519
 
-```sql
-SELECT LOWER(email) AS normalized_email, COUNT(*) AS total
-FROM users
-GROUP BY LOWER(email)
-HAVING COUNT(*) > 1;
-```
+## 12. Ảnh minh chứng
 
-Chỉ khi truy vấn không trả về dòng nào mới thêm chỉ mục:
+Ảnh minh chứng giao diện, API và cơ sở dữ liệu:
 
-```sql
-ALTER TABLE users ADD UNIQUE KEY uq_users_email (email);
-```
-
-## Chụp ảnh minh chứng nộp bài
-
-Cần nộp tối thiểu ảnh API hoạt động thành công và ảnh dữ liệu đã được lưu trong CSDL. Nên chụp thêm ảnh chứng minh API từ chối yêu cầu không có token.
-
-### Ảnh API bằng Postman
-
-1. Khởi chạy NestJS theo phần hướng dẫn bên trên. Mở Postman và tạo yêu cầu `POST` tới `http://localhost:3000/auth/register`.
-2. Chọn **Body → raw → JSON**, nhập:
-
-   ```json
-   {
-     "name": "Wardrobe Demo",
-     "email": "wardrobe-demo@example.com",
-     "password": "demo-pass-123"
-   }
-   ```
-
-3. Bấm **Send**. Đăng ký thành công trả mã `201`. Nếu email đã tồn tại, đổi sang email khác.
-
-<img width="1440" height="900" alt="Ảnh màn hình 2026-10-08 lúc 07 52 56" src="https://github.com/user-attachments/assets/6c74ae92-f4a4-4d98-a825-a999b1c24243" />
-
-4. Tạo yêu cầu `POST http://localhost:3000/auth/login`, chọn **Body → raw → JSON** và nhập:
-
-   ```json
-   {
-     "email": "wardrobe-demo@example.com",
-     "password": "demo-pass-123"
-   }
-   ```
-
-   Đăng nhập thành công trả mã `200` cùng `access_token`.
-   
-<img width="1440" height="900" alt="Ảnh màn hình 2026-10-08 lúc 07 53 08" src="https://github.com/user-attachments/assets/df86791f-e3a4-4fc7-bf63-3d7ddda24cc2" />
-
-5. Tạo yêu cầu `GET http://localhost:3000/user/me`. Gửi một lần không có token để kiểm tra phản hồi `401 Unauthorized`. Sau đó chọn **Authorization → Bearer Token**, dán token và gửi lại; kết quả thành công là `200 OK`.
-
-<img width="1440" height="900" alt="Ảnh màn hình 2026-10-08 lúc 07 53 12" src="https://github.com/user-attachments/assets/b7dd6293-de08-43be-9f5c-e41870d430ed" />
-
-### Ảnh dữ liệu MariaDB
-
-Sau khi đăng nhập MariaDB và chạy truy vấn ở bước tiếp theo, chụp ảnh phần truy vấn cùng hàng kết quả. Không đưa mật khẩu, JWT hoặc mã băm mật khẩu vào ảnh nộp.
-
-<img width="1440" height="900" alt="Ảnh màn hình 2026-10-08 lúc 07 57 29" src="https://github.com/user-attachments/assets/a8f65023-037c-4265-8d14-71b8f0a011c5" />
-
-## Kiểm thử và kiểm tra
-
-Các kiểm tra gần nhất cho NestJS:
-
-| Kiểm tra | Kết quả |
-|---|---|
-| Biên dịch NestJS | Đạt |
-| Kiểm tra mã nguồn NestJS | Đạt |
-| Kiểm thử tự động NestJS | 13 nhóm kiểm thử, 18 kiểm thử đạt |
-
-Các giao diện và thao tác CRUD của ứng dụng Express/React cũng đã được kiểm tra trước đó bằng dữ liệu tạm thời; các dữ liệu kiểm thử đã được xóa sau khi kiểm tra. Để chạy lệnh kiểm tra:
-
-```bash
-npm --prefix backend run build
-npm --prefix backend run lint
-npm --prefix backend test -- --runInBand
-
-npm --prefix frontend run lint
-npm --prefix frontend run build
-```
-
-## Giới hạn hiện tại
-
-- Giao diện React đang gọi API Express; chưa có màn hình đăng nhập và chưa gửi JWT.
-- NestJS cung cấp API xác thực riêng; các đường dẫn CRUD và quy tắc phân quyền trong NestJS không tự động áp dụng cho Express.
-- Danh mục là dữ liệu dùng chung; chưa có phân quyền theo vai trò quản trị.
-- Việc xóa quần áo hoặc trang phục có liên kết trong ứng dụng hiện cần xử lý các dòng liên kết trước. Chuỗi thao tác của giao diện không phải một giao dịch nguyên tử; nếu khôi phục liên kết sau lỗi cũng thất bại, cần kiểm tra lại dữ liệu trước khi thử lại.
-- API Express hiện chưa có tải ảnh lên, bộ lọc theo mùa/loại trang phục hoặc lọc dữ liệu theo người dùng.
-
-## Minh chứng các phần đã thực hiện
-
-Các ảnh bên dưới là minh chứng giao diện và thao tác quản lý dữ liệu đã có trong dự án.
+<img width="1440" height="900" alt="Ảnh đăng ký API" src="https://github.com/user-attachments/assets/6c74ae92-f4a4-4d98-a825-a999b1c24243" />
+<img width="1440" height="900" alt="Ảnh đăng nhập API" src="https://github.com/user-attachments/assets/df86791f-e3a4-4fc7-bf63-3d7ddda24cc2" />
+<img width="1440" height="900" alt="Ảnh API được bảo vệ" src="https://github.com/user-attachments/assets/b7dd6293-de08-43be-9f5c-e41870d430ed" />
+<img width="1440" height="900" alt="Ảnh dữ liệu MariaDB" src="https://github.com/user-attachments/assets/a8f65023-037c-4265-8d14-71b8f0a011c5" />
 
 ### Cơ sở dữ liệu
 
@@ -328,6 +263,6 @@ Các ảnh bên dưới là minh chứng giao diện và thao tác quản lý d�
 <img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 3" src="https://github.com/user-attachments/assets/f27bb61f-07b5-4664-b9a8-7d708bdb5d4d" />
 <img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 4" src="https://github.com/user-attachments/assets/939a5f04-a686-499c-9fd3-80f0a82ea519" />
 
-## Thông tin kho mã
+## Mã nguồn
 
-[Mã nguồn trên GitHub](https://github.com/Whales88888/Digital-Wardrobe-Group)
+[Whales88888/Digital-Wardrobe-Group](https://github.com/Whales88888/Digital-Wardrobe-Group)

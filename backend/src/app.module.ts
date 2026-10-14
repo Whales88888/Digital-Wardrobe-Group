@@ -11,11 +11,13 @@ import { ClothingModule } from './clothing/clothing.module';
 import { OutfitModule } from './outfit/outfit.module';
 import { OutfitItemModule } from './outfit-item/outfit-item.module';
 import { AuthModule } from './auth/auth.module';
+import { ActivityModule } from './activity/activity.module';
 
 @Module({
   imports: [
     DatabaseModule,
     AuthModule,
+    ActivityModule,
 
     UserModule,
     CategoryModule,

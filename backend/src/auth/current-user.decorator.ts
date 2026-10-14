@@ -4,6 +4,8 @@ import type { Request } from 'express';
 export interface AuthenticatedUser {
   sub: number;
   email: string;
+  sid: string;
+  role: 'user' | 'admin';
 }
 
 type AuthenticatedRequest = Request & { user: AuthenticatedUser };

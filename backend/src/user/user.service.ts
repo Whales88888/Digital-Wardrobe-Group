@@ -10,19 +10,17 @@ import { User } from './user.entity';
 
 export type PublicUser = Omit<User, 'password'>;
 
+export interface ProfileUpdate {
+  name?: string;
+  email?: string;
+}
+
 @Injectable()
 export class UserService {
   constructor(
     @Inject('USER_REPOSITORY')
     private readonly userRepository: Repository<User>,
   ) {}
-
-  // Hiển thị tất cả users
-  async findAll(): Promise<PublicUser[]> {
-    return (await this.userRepository.find()).map(
-      ({ password: _password, ...user }) => user,
-    );
-  }
 
   // Hiển thị một user theo ID
   async findOne(user_id: number): Promise<PublicUser | null> {
@@ -36,6 +34,10 @@ export class UserService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { email } });
+  }
+
+  async findByIdWithPassword(user_id: number): Promise<User | null> {
+    return this.userRepository.findOne({ where: { user_id } });
   }
 
   async create(data: Partial<User>): Promise<PublicUser> {
@@ -56,8 +58,12 @@ export class UserService {
 
   async update(
     user_id: number,
-    data: Partial<User>,
+    value: unknown,
   ): Promise<PublicUser | null> {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new BadRequestException('Profile data must be an object');
+    }
+    const data = value as ProfileUpdate;
     const existingUser = await this.userRepository.findOne({
       where: { user_id },
     });
@@ -73,9 +79,6 @@ export class UserService {
       updates.email = this.normalizeEmail(data.email);
       await this.ensureEmailAvailable(updates.email, user_id);
     }
-    if (data.password !== undefined) {
-      updates.password = await hash(this.requirePassword(data.password), 12);
-    }
     if (Object.keys(updates).length === 0) {
       throw new BadRequestException('At least one user field must be provided');
     }
@@ -83,8 +86,9 @@ export class UserService {
     return this.findOne(user_id);
   }
 
-  async remove(user_id: number): Promise<void> {
-    await this.userRepository.delete(user_id);
+  async updatePassword(user_id: number, password: string): Promise<void> {
+    const hashedPassword = await hash(this.requirePassword(password), 12);
+    await this.userRepository.update(user_id, { password: hashedPassword });
   }
 
   private normalizeEmail(email: string | undefined): string {

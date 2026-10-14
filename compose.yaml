@@ -1,0 +1,53 @@
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: digital_wardrobe
+      MARIADB_USER: ${DB_USER:?Set DB_USER in .env}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
+    volumes:
+      - wardrobe-db-data:/var/lib/mysql
+      - ./sql/digital_wardrobe.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      IMAGE_STORAGE_DIR: /app/uploads
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: digital_wardrobe
+      DB_USER: ${DB_USER:?Set DB_USER in .env}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      PORT: "3000"
+    volumes:
+      - wardrobe-image-data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+
+volumes:
+  wardrobe-db-data:
+  wardrobe-image-data:

@@ -1,10 +1,12 @@
 {
   "name": "digital-wardrobe-group",
   "version": "1.0.0",
-  "description": "Nhóm phát triển hệ thống Web **Digital Wardrobe – Tủ quần áo thông minh**.",
-  "main": "index.js",
+  "description": "Digital Wardrobe clothing collection and outfit planner.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm --prefix frontend run build && npm --prefix backend run build",
+    "lint": "npm --prefix frontend run lint && npm --prefix backend run lint",
+    "test": "npm --prefix frontend test && npm --prefix backend test -- --runInBand",
+    "test:e2e": "npm --prefix backend run test:e2e -- --runInBand"
   },
   "repository": {
     "type": "git",
@@ -12,21 +14,13 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/Whales88888/Digital-Wardrobe-Group/issues"
   },
   "homepage": "https://github.com/Whales88888/Digital-Wardrobe-Group#readme",
-  "dependencies": {
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "mariadb": "^3.5.4"
-  },
-  "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/node": "^26.5.1",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^7.0.2"
+  "engines": {
+    "node": ">=24.9.0"
   }
 }

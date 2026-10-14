@@ -15,6 +15,6 @@ export default function AboutPage() {
       <article><span className="about-icon"><Tags size={19} aria-hidden="true" /></span><span className="eyebrow">A little more order</span><h2>Categories that stay useful.</h2><p>Categories organize the pieces you already have and filter your wardrobe without inventing additional fields.</p></article>
       <article><span className="about-icon"><Boxes size={19} aria-hidden="true" /></span><span className="eyebrow">Outfits, connected</span><h2>Combinations from your own closet.</h2><p>Saved outfits are shown with their linked clothing through the existing Outfit Item relationship.</p></article>
     </section>
-    <section className="about-note"><span className="eyebrow">Built for everyday use</span><p>Digital Wardrobe is a practical clothing-management project. Authentication is not available in the current backend, so this app does not simulate sign-in or user privacy.</p></section>
+    <section className="about-note"><span className="eyebrow">Built for everyday use</span><p>Sign in with a protected, short-lived session to keep your clothing and outfits connected to your account. Shared category changes are reserved for administrators.</p></section>
   </main>
 }

@@ -1,25 +1,57 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
+  Query,
+  NotFoundException,
+  StreamableFile,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { ClothingService } from './clothing.service';
 import { Clothing } from './clothing.entity';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
+import { ImageStorageService } from './image-storage.service';
+import type { ImageUploadFile } from './image-storage.service';
+import type { ClothingFilters } from './clothing.service';
 
 @Controller('clothing')
 export class ClothingController {
-  constructor(private readonly clothingService: ClothingService) {}
+  constructor(
+    private readonly clothingService: ClothingService,
+    private readonly imageStorage: ImageStorageService,
+  ) {}
+
+  @Get('images/:userId/:fileName')
+  @Header('Cache-Control', 'private, no-store')
+  @Header('X-Content-Type-Options', 'nosniff')
+  async getLocalImage(
+    @Param('userId') userId: string,
+    @Param('fileName') fileName: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<StreamableFile> {
+    if (!/^[1-9]\d*$/.test(userId) || Number(userId) !== user.sub) {
+      throw new NotFoundException('Image not found');
+    }
+    const image = await this.imageStorage.readLocal(user.sub, fileName);
+    return new StreamableFile(image.buffer, { type: image.mimetype });
+  }
 
   @Get()
-  findAll(@CurrentUser() user: AuthenticatedUser): Promise<Clothing[]> {
-    return this.clothingService.findAll(user.sub);
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() filters: ClothingFilters,
+  ) {
+    return this.clothingService.findAll(user.sub, filters);
   }
 
   @Get(':id')
@@ -36,6 +68,22 @@ export class ClothingController {
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Clothing> {
     return this.clothingService.create(data, user.sub);
+  }
+
+  @Post('images')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async uploadImage(
+    @UploadedFile() file: ImageUploadFile | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ image_url: string }> {
+    if (!file) {
+      throw new BadRequestException('An image file is required');
+    }
+    return { image_url: await this.imageStorage.upload(file, user.sub) };
   }
 
   @Patch(':id')

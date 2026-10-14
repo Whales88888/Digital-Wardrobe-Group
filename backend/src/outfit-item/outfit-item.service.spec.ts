@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Clothing } from '../clothing/clothing.entity';
 import { Outfit } from '../outfit/outfit.entity';
 import { OutfitItem } from './outfit-item.entity';
@@ -41,6 +41,14 @@ describe('OutfitItemService', () => {
     await expect(
       service.create({ outfit_id: 3, clothing_id: 5 }, 12),
     ).rejects.toBeInstanceOf(NotFoundException);
+    expect(itemRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed item IDs before checking linked records', async () => {
+    await expect(
+      service.create({ outfit_id: 3.5, clothing_id: 5 }, 12),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(outfitRepository.findOne).not.toHaveBeenCalled();
     expect(itemRepository.save).not.toHaveBeenCalled();
   });
 });
