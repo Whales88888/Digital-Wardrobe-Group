@@ -79,7 +79,7 @@ erDiagram
 
 ### 4.2. Lựa chọn mô hình dữ liệu
 
-MariaDB quan hệ là database duy nhất đang chạy, phù hợp với dữ liệu có quan hệ rõ và cần khóa ngoại/giao dịch. Document NoSQL có thể phù hợp metadata linh hoạt; Graph có thể hỗ trợ gợi ý qua nhiều quan hệ. Hai mô hình sau chỉ được phân tích, **chưa triển khai** vì chưa có nhu cầu đủ lớn để biện minh thêm hệ thống cần đồng bộ và vận hành.
+MariaDB quan hệ là database duy nhất đang chạy, phù hợp với dữ liệu có quan hệ rõ và cần khóa ngoại/giao dịch. Hệ thống hiện đang tập trung vào mô hình quan hệ để đảm bảo tính nhất quán, truy vấn dữ liệu rõ ràng và dễ vận hành trong môi trường sản phẩm.
 
 ### Vai trò người dùng
 
