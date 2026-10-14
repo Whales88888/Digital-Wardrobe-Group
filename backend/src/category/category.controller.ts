@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 
 import { CategoryService } from './category.service';
@@ -13,6 +14,7 @@ import { Category } from './category.entity';
 import { Roles } from '../auth/roles.decorator';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
+import type { CategoryPageQuery } from './category.service';
 
 @Controller('category')
 export class CategoryController {
@@ -21,6 +23,11 @@ export class CategoryController {
   @Get()
   findAll(): Promise<Category[]> {
     return this.categoryService.findAll();
+  }
+
+  @Get('page')
+  findPage(@Query() query: CategoryPageQuery) {
+    return this.categoryService.findPage(query);
   }
 
   @Get('usage')

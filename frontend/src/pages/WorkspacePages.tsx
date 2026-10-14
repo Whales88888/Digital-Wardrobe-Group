@@ -280,12 +280,23 @@ export function ClothingDetailPage() {
 export function CategoriesPage() {
   const { user } = useAuth()
   const canManageCategories = user?.role === 'admin'
-  const categories = useResource(['categories'], categoriesApi.list)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const currentPage = Number(searchParams.get('page') ?? 1)
+  const page = Number.isSafeInteger(currentPage) && currentPage > 0 ? currentPage : 1
+  const categories = useResource(['categories', 'page', page], () => categoriesApi.page(page))
   const usage = useResource(['category-usage'], categoriesApi.usage)
   const [editing, setEditing] = useState<Category | 'new' | null>(null)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<FeedbackValue>(null)
   const navigate = useNavigate()
+  const categoryItems = categories.data?.items ?? []
+
+  function changePage(nextPage: number) {
+    const params = new URLSearchParams(searchParams)
+    if (nextPage === 1) params.delete('page')
+    else params.set('page', String(nextPage))
+    setSearchParams(params)
+  }
 
   async function save(name: string) {
     setBusy(true)
@@ -299,7 +310,7 @@ export function CategoriesPage() {
     catch (error) { setFeedback({ message: error instanceof Error ? error.message : 'Could not delete category. It may still be assigned to clothing.', error: true }) }
   }
 
-  return <><PageHeading eyebrow="Organise" title="Categories" description={canManageCategories ? 'Manage the shared catalog and filter your pieces by category.' : 'Browse the shared catalog and filter your pieces by category.'} action={canManageCategories ? <button className="button-primary button-small" type="button" onClick={() => setEditing('new')}><Plus size={15} /> Add category</button> : undefined} /><Feedback value={feedback} />{categories.loading || usage.loading ? <LoadingState label="Loading categories" /> : categories.error || usage.error ? <ErrorState message={(categories.error || usage.error)?.message ?? 'Could not load categories.'} onRetry={() => { categories.retry(); usage.retry() }} /> : categories.data?.length ? <div className="category-list">{categories.data.map((category) => { const count = usage.data?.find((entry) => entry.category_id === category.category_id)?.count ?? 0; return <article className="category-card" key={category.category_id}><button className="category-card-main" type="button" onClick={() => navigate(`/app/wardrobe?category=${category.category_id}`)}><span className="category-count">{String(count).padStart(2, '0')} pieces</span><h3>{category.name}</h3><p>Category {category.category_id}</p></button>{canManageCategories && <div className="category-actions"><button className="icon-button" type="button" title="Edit category" aria-label={`Edit ${category.name}`} onClick={() => setEditing(category)}><Pencil size={15} /></button><button className="icon-button" type="button" title="Delete category" aria-label={`Delete ${category.name}`} onClick={() => void remove(category)}><Trash2 size={15} /></button></div>}</article>})}</div> : <EmptyState title="No categories yet." detail={canManageCategories ? 'Create a category before adding clothing.' : 'An administrator must add categories before clothing can be added.'} action={canManageCategories ? <button className="button-primary button-small" type="button" onClick={() => setEditing('new')}><Plus size={15} /> Add category</button> : undefined} />}{canManageCategories && editing && <Modal title={editing === 'new' ? 'Add a category' : 'Edit category'} detail="Category names are stored by the existing categories API." onClose={() => setEditing(null)}><CategoryForm initial={editing === 'new' ? null : editing} busy={busy} onCancel={() => setEditing(null)} onSubmit={save} /></Modal>}</>
+  return <><PageHeading eyebrow="Organise" title="Categories" description={canManageCategories ? 'Manage the shared catalog and filter your pieces by category.' : 'Browse the shared catalog and filter your pieces by category.'} action={canManageCategories ? <button className="button-primary button-small" type="button" onClick={() => setEditing('new')}><Plus size={15} /> Add category</button> : undefined} /><Feedback value={feedback} />{categories.loading || usage.loading ? <LoadingState label="Loading categories" /> : categories.error || usage.error ? <ErrorState message={(categories.error || usage.error)?.message ?? 'Could not load categories.'} onRetry={() => { categories.retry(); usage.retry() }} /> : categoryItems.length ? <div className="category-list">{categoryItems.map((category) => { const count = usage.data?.find((entry) => entry.category_id === category.category_id)?.count ?? 0; return <article className="category-card" key={category.category_id}><button className="category-card-main" type="button" onClick={() => navigate(`/app/wardrobe?category=${category.category_id}`)}><span className="category-count">{String(count).padStart(2, '0')} pieces</span><h3>{category.name}</h3><p>Category {category.category_id}</p></button>{canManageCategories && <div className="category-actions"><button className="icon-button" type="button" title="Edit category" aria-label={`Edit ${category.name}`} onClick={() => setEditing(category)}><Pencil size={15} /></button><button className="icon-button" type="button" title="Delete category" aria-label={`Delete ${category.name}`} onClick={() => void remove(category)}><Trash2 size={15} /></button></div>}</article>})}</div> : <EmptyState title="No categories yet." detail={canManageCategories ? 'Create a category before adding clothing.' : 'An administrator must add categories before clothing can be added.'} action={canManageCategories ? <button className="button-primary button-small" type="button" onClick={() => setEditing('new')}><Plus size={15} /> Add category</button> : undefined} />}{categories.data && categories.data.total_pages > 1 && <nav className="pagination-controls" aria-label="Category pages"><button className="button-secondary button-small" type="button" disabled={page <= 1} onClick={() => changePage(page - 1)}>Previous</button><span>Page {categories.data.page} of {categories.data.total_pages}</span><button className="button-secondary button-small" type="button" disabled={page >= categories.data.total_pages} onClick={() => changePage(page + 1)}>Next</button></nav>}{canManageCategories && editing && <Modal title={editing === 'new' ? 'Add a category' : 'Edit category'} detail="Category names are stored by the existing categories API." onClose={() => setEditing(null)}><CategoryForm initial={editing === 'new' ? null : editing} busy={busy} onCancel={() => setEditing(null)} onSubmit={save} /></Modal>}</>
 }
 
 function OutfitCard({ outfit, links, clothing, onEdit, onDelete, onAdd, onRemove }: { outfit: Outfit; links: OutfitItem[]; clothing: Clothing[]; onEdit: () => void; onDelete: () => void; onAdd: (clothingId: number) => Promise<void>; onRemove: (item: OutfitItem) => void }) {
@@ -310,7 +321,10 @@ function OutfitCard({ outfit, links, clothing, onEdit, onDelete, onAdd, onRemove
 }
 
 export function OutfitsPage() {
-  const outfits = useResource(['outfits'], outfitsApi.list)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const currentPage = Number(searchParams.get('page') ?? 1)
+  const page = Number.isSafeInteger(currentPage) && currentPage > 0 ? currentPage : 1
+  const outfits = useResource(['outfits', 'page', page], () => outfitsApi.page(page))
   const outfitItems = useResource(['outfit-items'], outfitItemsApi.list)
   const clothing = useResource(['clothing', 'outfits'], () => listAllClothing())
   const [editing, setEditing] = useState<Outfit | 'new' | null>(null)
@@ -320,6 +334,12 @@ export function OutfitsPage() {
   const loading = sources.some((source) => source.loading)
   const error = sources.find((source) => source.error)?.error
   const retryAll = () => sources.forEach((source) => source.retry())
+  function changePage(nextPage: number) {
+    const params = new URLSearchParams(searchParams)
+    if (nextPage === 1) params.delete('page')
+    else params.set('page', String(nextPage))
+    setSearchParams(params)
+  }
 
   async function save(data: OutfitInput) {
     setBusy(true)
@@ -352,5 +372,5 @@ export function OutfitsPage() {
     catch (reason) { setFeedback({ message: reason instanceof Error ? reason.message : 'Could not remove this piece.', error: true }) }
   }
 
-  return <><PageHeading eyebrow="Combinations" title="Outfit planner" description="Outfits and their linked clothing pieces from your account." action={<button className="button-primary button-small" type="button" disabled={loading} onClick={() => setEditing('new')}><Plus size={15} /> Create outfit</button>} /><Feedback value={feedback} />{loading ? <LoadingState label="Loading outfits and linked pieces" /> : error ? <ErrorState message={error.message} onRetry={retryAll} /> : outfits.data?.length ? <div className="outfit-grid">{outfits.data.map((outfit) => <OutfitCard key={outfit.outfit_id} outfit={outfit} links={(outfitItems.data ?? []).filter((item) => item.outfit_id === outfit.outfit_id)} clothing={clothing.data ?? []} onEdit={() => setEditing(outfit)} onDelete={() => void remove(outfit)} onAdd={(clothingId) => addItem(outfit.outfit_id, clothingId)} onRemove={(item) => void removeItem(item)} />)}</div> : <EmptyState title="No saved outfits yet." detail="Create an outfit, then add pieces from your wardrobe." action={<button className="button-primary button-small" type="button" onClick={() => setEditing('new')}><Plus size={15} /> Create outfit</button>} />}{editing && <Modal title={editing === 'new' ? 'Create an outfit' : 'Edit outfit'} detail="Add an outfit for your account." onClose={() => setEditing(null)}><OutfitForm initial={editing === 'new' ? null : editing} busy={busy} onCancel={() => setEditing(null)} onSubmit={save} /></Modal>}</>
+  return <><PageHeading eyebrow="Combinations" title="Outfit planner" description="Outfits and their linked clothing pieces from your account." action={<button className="button-primary button-small" type="button" disabled={loading} onClick={() => setEditing('new')}><Plus size={15} /> Create outfit</button>} /><Feedback value={feedback} />{loading ? <LoadingState label="Loading outfits and linked pieces" /> : error ? <ErrorState message={error.message} onRetry={retryAll} /> : outfits.data?.items.length ? <div className="outfit-grid">{outfits.data.items.map((outfit) => <OutfitCard key={outfit.outfit_id} outfit={outfit} links={(outfitItems.data ?? []).filter((item) => item.outfit_id === outfit.outfit_id)} clothing={clothing.data ?? []} onEdit={() => setEditing(outfit)} onDelete={() => void remove(outfit)} onAdd={(clothingId) => addItem(outfit.outfit_id, clothingId)} onRemove={(item) => void removeItem(item)} />)}</div> : <EmptyState title="No saved outfits yet." detail="Create an outfit, then add pieces from your wardrobe." action={<button className="button-primary button-small" type="button" onClick={() => setEditing('new')}><Plus size={15} /> Create outfit</button>} />}{outfits.data && outfits.data.total_pages > 1 && <nav className="pagination-controls" aria-label="Outfit pages"><button className="button-secondary button-small" type="button" disabled={page <= 1} onClick={() => changePage(page - 1)}>Previous</button><span>Page {outfits.data.page} of {outfits.data.total_pages}</span><button className="button-secondary button-small" type="button" disabled={page >= outfits.data.total_pages} onClick={() => changePage(page + 1)}>Next</button></nav>}{editing && <Modal title={editing === 'new' ? 'Create an outfit' : 'Edit outfit'} detail="Add an outfit for your account." onClose={() => setEditing(null)}><OutfitForm initial={editing === 'new' ? null : editing} busy={busy} onCancel={() => setEditing(null)} onSubmit={save} /></Modal>}</>
 }

@@ -89,7 +89,7 @@ MariaDB quan hệ là database duy nhất đang chạy, phù hợp với dữ li
 | `user` | Quản lý quần áo, outfit, lịch sử mặc, kế hoạch và chăm sóc thuộc tài khoản |
 | `admin` | Có quyền người dùng và quản lý danh mục dùng chung |
 
-Tài khoản đăng ký mới mặc định là `user`. Hiện cấp quyền `admin` qua database; chưa có giao diện quản trị tài khoản.
+Tài khoản đăng ký mới mặc định là `user`. Admin có thể phân trang danh sách tài khoản, đổi vai trò và xóa tài khoản tại `/app/admin/users`. Không thể tự xóa tài khoản đang đăng nhập hoặc xóa/hạ vai trò admin cuối cùng.
 
 Để cấp quyền cho tài khoản quản trị đầu tiên, đăng ký tài khoản trước rồi chạy bằng quyền database:
 
@@ -109,12 +109,14 @@ Các endpoint dữ liệu yêu cầu cookie đăng nhập. Prefix `/api` là c�
 |---|---|---|
 | Auth | `POST /auth/register`, `POST /auth/login` | Tạo tài khoản/phiên, đăng nhập |
 | Auth | `GET /auth/session`, `POST /auth/logout`, `POST /auth/change-password` | Kiểm tra/thu hồi phiên, đổi mật khẩu |
+| Auth | `POST /auth/forgot-password`, `POST /auth/reset-password` | Gửi và sử dụng token đặt lại mật khẩu |
 | Profile | `GET/PATCH /user/me` | Hồ sơ người hiện tại |
+| Admin tài khoản | `GET /user/admin`, `PATCH /user/admin/:id/role`, `DELETE /user/admin/:id` | Quản lý tài khoản có phân trang; chỉ admin |
 | Quần áo | `GET/POST /clothing`, `GET/PATCH/DELETE /clothing/:id` | CRUD và lọc/phân trang |
 | Ảnh | `POST /clothing/images` | Upload JPEG/PNG/WebP, tối đa 5 MB |
-| Danh mục | `GET /category`, `GET /category/:id` | Đọc danh mục |
+| Danh mục | `GET /category`, `GET /category/page`, `GET /category/:id` | Đọc danh mục, có phân trang |
 | Danh mục admin | `POST/PATCH/DELETE /category[/:id]` | Thay đổi danh mục |
-| Outfit | `GET/POST /outfit`, `GET/PATCH/DELETE /outfit/:id` | CRUD outfit |
+| Outfit | `GET /outfit/page`, `GET/POST /outfit`, `GET/PATCH/DELETE /outfit/:id` | CRUD outfit và phân trang |
 | Thành phần outfit | `GET/POST /outfit-item`, `GET/PATCH/DELETE /outfit-item/:id` | Ghép món vào outfit |
 | Dashboard/gợi ý | `GET /activity/dashboard`, `GET /activity/recommendations` | Thống kê và gợi ý cá nhân |
 | Nhật ký mặc | `GET/POST /activity/logs`, `PATCH/DELETE /activity/logs/:id` | CRUD lịch sử mặc |
@@ -127,6 +129,7 @@ Các endpoint dữ liệu yêu cầu cookie đăng nhập. Prefix `/api` là c�
 
 - Mật khẩu được băm bằng bcrypt; không lưu hoặc ghi log mật khẩu dạng rõ.
 - Đổi mật khẩu yêu cầu xác minh mật khẩu hiện tại, băm mật khẩu mới và thu hồi mọi phiên đang hoạt động.
+- Quên mật khẩu dùng token ngẫu nhiên một lần, chỉ lưu SHA-256, hết hạn sau 30 phút và thu hồi mọi phiên sau khi reset. SMTP chưa cấu hình thì hệ thống ghi lỗi gửi mail phía server nhưng vẫn trả thông báo trung tính để không làm lộ email có tài khoản hay không.
 - JWT phiên được đặt trong cookie `HttpOnly`, `SameSite=Lax`, `Secure` ở production; thời hạn 15 phút.
 - JWT chứa session ID; server kiểm tra session còn hiệu lực trong database cho request được bảo vệ. Logout thu hồi session ở server.
 - Đăng nhập và đăng ký giới hạn 5 lần/phút cho mỗi IP; vượt giới hạn trả HTTP `429`. Bộ đếm dùng storage trong bộ nhớ của tiến trình, nên triển khai nhiều API replicas cần chuyển sang storage dùng chung.
@@ -134,10 +137,10 @@ Các endpoint dữ liệu yêu cầu cookie đăng nhập. Prefix `/api` là c�
 - CSRF guard yêu cầu `X-Wardrobe-Request: 1` với request thay đổi dữ liệu.
 - Vai trò `admin` giới hạn quyền sửa danh mục.
 - Service lấy `user_id` từ danh tính đã xác thực, không tin ID chủ sở hữu do client truyền. Outfit và quần áo phải cùng chủ sở hữu khi tạo liên kết.
-- Ảnh lưu local theo user trong development; route đọc ảnh yêu cầu session và kiểm tra đúng chủ sở hữu. Production cần cấu hình Cloudinary; URL Cloudinary hiện không phải signed/private delivery.
+- Ảnh development lưu local theo user. Ảnh upload lên Cloudinary dùng delivery `authenticated`, chỉ được đọc qua API có session và kiểm tra chủ sở hữu; ảnh được xóa khi thay ảnh hoặc xóa món đồ. URL ảnh do người dùng nhập thủ công vẫn do host bên ngoài kiểm soát; ảnh Cloudinary đã upload trước khi chuyển sang chế độ private cần được xử lý riêng.
 - Thông báo lỗi máy chủ không trả stack trace/database detail cho trình duyệt.
 
-Đây là biện pháp hiện có, không phải chứng nhận bảo mật. Trước production cần bổ sung quy trình đặt lại mật khẩu và quản lý admin an toàn; nếu chạy nhiều API replicas, cần dùng storage rate-limit dùng chung.
+Đây là biện pháp hiện có, không phải chứng nhận bảo mật. Trước production cần cấu hình SMTP, HTTPS và quản lý admin an toàn; nếu chạy nhiều API replicas, cần dùng storage rate-limit dùng chung.
 
 ## 7. Luật – Đạo đức – Nghề nghiệp
 
@@ -173,7 +176,8 @@ npm --prefix frontend run dev
 
 Mở URL Vite (thường `http://localhost:5173`). Vite proxy `/api` tới NestJS tại port `3000`. Có thể dùng task VS Code **Run Digital Wardrobe** nếu môi trường đã cấu hình task.
 
-Ảnh development được lưu riêng theo user; production cần cấu hình Cloudinary.
+Ảnh development được lưu riêng theo user. Để upload ảnh ở production, cấu hình đủ `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` và `CLOUDINARY_API_SECRET`.
+Để gửi email đặt lại mật khẩu, cấu hình `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM` và tùy chọn `SMTP_USER`/`SMTP_PASSWORD`; `FRONTEND_URL` phải trỏ tới host giao diện. Nếu chưa cấu hình SMTP, endpoint reset vẫn không tiết lộ trạng thái tài khoản nhưng email sẽ không được gửi.
 
 ### Docker Compose
 
@@ -192,17 +196,47 @@ Với database cũ, sao lưu trước rồi áp dụng các migration trong [sql
 ```bash
 npm run lint
 npm test
+npm run test:e2e
+npm run test:e2e:db
+npm run test:browser
 npm run build
 ```
 
-Kiểm tra gần nhất: lint và build thành công; backend unit tests **18 suites / 49 tests**, frontend **1 test file / 7 tests**, và HTTP integration tests **4 tests** đều đạt. HTTP integration tests kiểm tra CSRF, validation payload, ràng buộc chủ sở hữu và giới hạn đăng nhập với repository giả lập; chưa thay thế browser E2E hoặc kiểm thử MariaDB thật. CI chạy lint, unit tests, HTTP integration tests và build qua GitHub Actions.
+`test:e2e` chạy HTTP integration tests với repository giả lập. Kiểm thử MariaDB và browser chỉ kết nối tới database có tên cố định `digital_wardrobe_e2e`; mã kiểm thử từ chối tên khác để tránh chạy nhầm trên database ứng dụng. Tạo database và user chỉ dành cho test trên một MariaDB instance riêng (hoặc môi trường test dùng một lần), không cấp quyền trên database ứng dụng:
+
+```sql
+CREATE DATABASE digital_wardrobe_e2e
+  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'wardrobe_e2e'@'127.0.0.1' IDENTIFIED BY '<strong-test-only-password>';
+GRANT ALL PRIVILEGES ON digital_wardrobe_e2e.* TO 'wardrobe_e2e'@'127.0.0.1';
+```
+
+Sau đó đặt các biến môi trường:
+
+```bash
+export E2E_DB_HOST=127.0.0.1
+export E2E_DB_PORT=3306
+export E2E_DB_USER=wardrobe_e2e
+export E2E_DB_PASSWORD='<strong-test-only-password>'
+export E2E_DB_NAME=digital_wardrobe_e2e
+
+node backend/test/setup-database.cjs
+npm run test:e2e:db
+npm run test:browser
+```
+
+Playwright tự khởi chạy API và frontend trên cổng riêng, không dùng lại server đang chạy và trỏ proxy tới API E2E. Cài Chromium trước bằng `./frontend/node_modules/.bin/playwright install --with-deps chromium`. Browser test tạo tài khoản/dữ liệu thử nghiệm trong database E2E; tuyệt đối không cấp cho user này quyền trên database có dữ liệu thật. CI tạo MariaDB dùng một lần, nạp schema, rồi chạy unit, HTTP, database và browser tests cùng lint/build.
+
+Lần kiểm tra local: backend **18 suites / 58 tests**, frontend **1 file / 7 tests**, HTTP integration **4 tests**, MariaDB integration **1 test** và browser E2E **1 test** đều đạt; lint/build cũng thành công.
 
 ## 10. Giới hạn đã biết
 
 - Gợi ý là heuristic, không dùng AI; lịch chưa gửi thông báo hoặc đồng bộ lịch ngoài.
-- Các danh sách outfit/danh mục chưa phân trang.
-- Chưa có đặt lại mật khẩu, giao diện quản trị tài khoản hoặc browser E2E tests.
-- Production cần cấu hình Cloudinary; ảnh chưa có signed/private delivery và asset chưa tự xóa khi xóa món đồ.
+- Reset mật khẩu gửi email qua SMTP; triển khai thực tế cần cấu hình SMTP và bảo vệ credentials.
+- Nhắc lịch/chăm sóc hiện hiển thị trong dashboard; chưa có push/email notification hoặc đồng bộ calendar.
+- Rate limiter lưu trong bộ nhớ; nhiều API replicas cần Redis hoặc storage dùng chung.
+- Xóa tài khoản cascade dữ liệu trong MariaDB nhưng chưa tự dọn Cloudinary assets của toàn bộ tài khoản; ảnh Cloudinary cũ cũng cần chuyển sang private delivery theo quy trình riêng.
+- NoSQL và Graph được phân tích trong báo cáo nhưng không triển khai; MariaDB là database duy nhất đang chạy.
 
 ## 11. Tài liệu tham khảo
 

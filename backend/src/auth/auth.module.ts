@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
 import { CsrfGuard } from './csrf.guard';
+import { PasswordResetMailer } from './password-reset-mailer.service';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { CsrfGuard } from './csrf.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
+    PasswordResetMailer,
     JwtAuthGuard,
     RolesGuard,
     CsrfGuard,

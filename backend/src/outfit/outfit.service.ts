@@ -7,6 +7,11 @@ import {
 import { Repository } from 'typeorm';
 import { Outfit } from './outfit.entity';
 
+export interface OutfitPageQuery {
+  page?: string;
+  page_size?: string;
+}
+
 @Injectable()
 export class OutfitService {
   constructor(
@@ -16,6 +21,21 @@ export class OutfitService {
 
   findAll(user_id: number) {
     return this.outfitRepository.find({ where: { user_id } });
+  }
+
+  async findPage(user_id: number, query: OutfitPageQuery) {
+    const page = this.parsePage(query.page, 1, 'page');
+    const page_size = this.parsePage(query.page_size, 12, 'page_size');
+    if (page_size > 100 || page > Math.floor(Number.MAX_SAFE_INTEGER / page_size)) {
+      throw new BadRequestException('Pagination is outside the supported range');
+    }
+    const [items, total] = await this.outfitRepository.findAndCount({
+      where: { user_id },
+      order: { name: 'ASC', outfit_id: 'ASC' },
+      skip: (page - 1) * page_size,
+      take: page_size,
+    });
+    return { items, page, page_size, total, total_pages: Math.ceil(total / page_size) };
   }
 
   findOne(outfit_id: number, user_id: number) {
@@ -101,5 +121,17 @@ export class OutfitService {
       );
     }
     return fields as Partial<Outfit>;
+  }
+
+  private parsePage(value: string | undefined, fallback: number, field: string): number {
+    if (value === undefined) return fallback;
+    if (!/^[1-9]\d*$/.test(value)) {
+      throw new BadRequestException(`${field} must be a positive integer`);
+    }
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed)) {
+      throw new BadRequestException(`${field} is outside the supported range`);
+    }
+    return parsed;
   }
 }

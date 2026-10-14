@@ -78,6 +78,10 @@ describe('ImageStorageService', () => {
       await expect(service.readLocal(43, fileName!)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+      await service.delete(imageUrl, 42);
+      await expect(service.readLocal(42, fileName!)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     } finally {
       await rm(storageDirectory, { recursive: true, force: true });
     }

@@ -3,12 +3,26 @@ import {
   ConflictException,
   Injectable,
   Inject,
+  NotFoundException,
 } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { hash } from 'bcryptjs';
 import { User } from './user.entity';
 
 export type PublicUser = Omit<User, 'password'>;
+
+export interface PageQuery {
+  page?: string;
+  page_size?: string;
+}
+
+export interface UserPage {
+  items: PublicUser[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+}
 
 export interface ProfileUpdate {
   name?: string;
@@ -38,6 +52,82 @@ export class UserService {
 
   async findByIdWithPassword(user_id: number): Promise<User | null> {
     return this.userRepository.findOne({ where: { user_id } });
+  }
+
+  async listUsers(query: PageQuery): Promise<UserPage> {
+    const page = this.parsePage(query.page, 1, 'page');
+    const page_size = this.parsePage(query.page_size, 20, 'page_size');
+    if (page_size > 100 || page > Math.floor(Number.MAX_SAFE_INTEGER / page_size)) {
+      throw new BadRequestException('Pagination is outside the supported range');
+    }
+    const [items, total] = await this.userRepository.findAndCount({
+      select: {
+        user_id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+      order: { user_id: 'ASC' },
+      skip: (page - 1) * page_size,
+      take: page_size,
+    });
+    return {
+      items,
+      page,
+      page_size,
+      total,
+      total_pages: Math.ceil(total / page_size),
+    };
+  }
+
+  async changeRole(
+    target_user_id: number,
+    actor_user_id: number,
+    role: unknown,
+  ): Promise<PublicUser> {
+    if (!Number.isSafeInteger(target_user_id) || target_user_id < 1) {
+      throw new BadRequestException('Invalid user ID');
+    }
+    if (role !== 'user' && role !== 'admin') {
+      throw new BadRequestException('Role must be user or admin');
+    }
+    if (target_user_id === actor_user_id && role === 'user') {
+      throw new BadRequestException('You cannot remove your own administrator role');
+    }
+    const user = await this.userRepository.findOne({
+      where: { user_id: target_user_id },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.role === 'admin' && role === 'user') {
+      const admins = await this.userRepository.count({ where: { role: 'admin' } });
+      if (admins <= 1) {
+        throw new ConflictException('At least one administrator must remain');
+      }
+    }
+    await this.userRepository.update(target_user_id, { role });
+    const updated = await this.findOne(target_user_id);
+    if (!updated) throw new NotFoundException('User not found');
+    return updated;
+  }
+
+  async deleteUser(target_user_id: number, actor_user_id: number): Promise<void> {
+    if (!Number.isSafeInteger(target_user_id) || target_user_id < 1) {
+      throw new BadRequestException('Invalid user ID');
+    }
+    if (target_user_id === actor_user_id) {
+      throw new BadRequestException('You cannot delete your own administrator account');
+    }
+    const user = await this.userRepository.findOne({
+      where: { user_id: target_user_id },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.role === 'admin') {
+      const admins = await this.userRepository.count({ where: { role: 'admin' } });
+      if (admins <= 1) {
+        throw new ConflictException('At least one administrator must remain');
+      }
+    }
+    await this.userRepository.delete(target_user_id);
   }
 
   async create(data: Partial<User>): Promise<PublicUser> {
@@ -87,8 +177,12 @@ export class UserService {
   }
 
   async updatePassword(user_id: number, password: string): Promise<void> {
-    const hashedPassword = await hash(this.requirePassword(password), 12);
+    const hashedPassword = await this.hashPassword(password);
     await this.userRepository.update(user_id, { password: hashedPassword });
+  }
+
+  async hashPassword(password: string): Promise<string> {
+    return hash(this.requirePassword(password), 12);
   }
 
   private normalizeEmail(email: string | undefined): string {
@@ -125,6 +219,18 @@ export class UserService {
       );
     }
     return password;
+  }
+
+  private parsePage(value: string | undefined, fallback: number, field: string): number {
+    if (value === undefined) return fallback;
+    if (!/^[1-9]\d*$/.test(value)) {
+      throw new BadRequestException(`${field} must be a positive integer`);
+    }
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed)) {
+      throw new BadRequestException(`${field} is outside the supported range`);
+    }
+    return parsed;
   }
 
   private async ensureEmailAvailable(

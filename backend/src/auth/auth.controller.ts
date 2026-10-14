@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Get,
   HttpCode,
@@ -45,6 +46,31 @@ export class AuthController {
     const result = await this.authService.login(credentials);
     this.setSessionCookie(response, result.access_token, result.expires_at);
     return { user: result.user };
+  }
+
+  @Public()
+  @Post('forgot-password')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() data: { email?: unknown }) {
+    if (typeof data?.email !== 'string') {
+      throw new BadRequestException('A valid email address is required');
+    }
+    await this.authService.requestPasswordReset(data.email);
+    return {
+      message: 'If an account exists for that email, a reset link will be sent.',
+    };
+  }
+
+  @Public()
+  @Post('reset-password')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() data: { token?: unknown; password?: unknown }) {
+    await this.authService.resetPassword(data?.token, data?.password);
+    return { success: true };
   }
 
   @Get('session')

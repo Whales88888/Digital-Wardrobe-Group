@@ -6,6 +6,7 @@ describe('OutfitService', () => {
   let service: OutfitService;
   const repository = {
     find: jest.fn(),
+    findAndCount: jest.fn(),
     findOne: jest.fn(),
     create: jest.fn((outfit) => outfit),
     save: jest.fn(),
@@ -23,6 +24,30 @@ describe('OutfitService', () => {
       .compile();
 
     service = module.get<OutfitService>(OutfitService);
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('returns a page scoped to the authenticated user', async () => {
+    repository.findAndCount.mockResolvedValue([[], 13]);
+
+    await expect(
+      service.findPage(12, { page: '2', page_size: '10' }),
+    ).resolves.toMatchObject({
+      items: [],
+      page: 2,
+      page_size: 10,
+      total: 13,
+      total_pages: 2,
+    });
+    expect(repository.findAndCount).toHaveBeenCalledWith({
+      where: { user_id: 12 },
+      order: { name: 'ASC', outfit_id: 'ASC' },
+      skip: 10,
+      take: 10,
+    });
   });
 
   it('requires a valid name and rejects unsupported fields', async () => {

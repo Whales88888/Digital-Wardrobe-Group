@@ -13,6 +13,11 @@ export interface CategoryUsage {
   count: number;
 }
 
+export interface CategoryPageQuery {
+  page?: string;
+  page_size?: string;
+}
+
 @Injectable()
 export class CategoryService {
   constructor(
@@ -25,6 +30,20 @@ export class CategoryService {
   // Hiển thị tất cả category
   async findAll(): Promise<Category[]> {
     return this.categoryRepository.find();
+  }
+
+  async findPage(query: CategoryPageQuery) {
+    const page = this.parsePage(query.page, 1, 'page');
+    const page_size = this.parsePage(query.page_size, 12, 'page_size');
+    if (page_size > 100 || page > Math.floor(Number.MAX_SAFE_INTEGER / page_size)) {
+      throw new BadRequestException('Pagination is outside the supported range');
+    }
+    const [items, total] = await this.categoryRepository.findAndCount({
+      order: { name: 'ASC', category_id: 'ASC' },
+      skip: (page - 1) * page_size,
+      take: page_size,
+    });
+    return { items, page, page_size, total, total_pages: Math.ceil(total / page_size) };
   }
 
   // Hiển thị một category theo ID
@@ -87,5 +106,17 @@ export class CategoryService {
       throw new BadRequestException('Category name must contain between 1 and 100 characters');
     }
     return value.trim();
+  }
+
+  private parsePage(value: string | undefined, fallback: number, field: string): number {
+    if (value === undefined) return fallback;
+    if (!/^[1-9]\d*$/.test(value)) {
+      throw new BadRequestException(`${field} must be a positive integer`);
+    }
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed)) {
+      throw new BadRequestException(`${field} is outside the supported range`);
+    }
+    return parsed;
   }
 }

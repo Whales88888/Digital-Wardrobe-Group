@@ -1,16 +1,19 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
   Inject,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { compare } from 'bcryptjs';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { DataSource, IsNull, MoreThan } from 'typeorm';
 import { UserService } from '../user/user.service';
 import { Session } from './session.entity';
-import type { User } from '../user/user.entity';
+import { PasswordResetToken } from './password-reset-token.entity';
+import { PasswordResetMailer } from './password-reset-mailer.service';
+import { User } from '../user/user.entity';
 
 const SESSION_DURATION_MS = 15 * 60 * 1000;
 
@@ -32,10 +35,13 @@ export interface RegistrationData extends AuthCredentials {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
     @Inject('DATA_SOURCE') private readonly dataSource: DataSource,
+    private readonly passwordResetMailer: PasswordResetMailer,
   ) {}
 
   async register(data: RegistrationData) {
@@ -80,6 +86,86 @@ export class AuthService {
       { user_id, revoked_at: IsNull() },
       { revoked_at: new Date() },
     );
+  }
+
+  async requestPasswordReset(email: string): Promise<void> {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      throw new BadRequestException('A valid email address is required');
+    }
+    const user = await this.userService.findByEmail(normalizedEmail);
+    if (!user) return;
+
+    const token = randomBytes(32).toString('base64url');
+    const token_hash = createHash('sha256').update(token).digest('hex');
+    const repository = this.dataSource.getRepository(PasswordResetToken);
+    await repository.update(
+      { user_id: user.user_id, used_at: IsNull() },
+      { used_at: new Date() },
+    );
+    await repository.save({
+      user_id: user.user_id,
+      token_hash,
+      expires_at: new Date(Date.now() + 30 * 60 * 1000),
+      used_at: null,
+    });
+    try {
+      await this.passwordResetMailer.send(user.email, user.name, token);
+    } catch (error) {
+      await repository.update({ token_hash }, { used_at: new Date() });
+      this.logger.error(
+        `Could not deliver password reset email (${error instanceof Error ? error.name : 'unknown error'})`,
+      );
+    }
+  }
+
+  async resetPassword(token: unknown, newPassword: unknown): Promise<void> {
+    if (typeof token !== 'string' || token.length < 32 || token.length > 100) {
+      throw new BadRequestException('Invalid or expired password reset token');
+    }
+    if (typeof newPassword !== 'string') {
+      throw new BadRequestException('A new password is required');
+    }
+    const token_hash = createHash('sha256').update(token).digest('hex');
+    const repository = this.dataSource.getRepository(PasswordResetToken);
+    const resetToken = await repository.findOne({
+      where: {
+        token_hash,
+        expires_at: MoreThan(new Date()),
+        used_at: IsNull(),
+      },
+    });
+    if (!resetToken) {
+      throw new BadRequestException('Invalid or expired password reset token');
+    }
+    const hashedPassword = await this.userService.hashPassword(newPassword);
+
+    await this.dataSource.transaction(async (manager) => {
+      const tokenRepository = manager.getRepository(PasswordResetToken);
+      const claim = await tokenRepository.update(
+        {
+          password_reset_token_id: resetToken.password_reset_token_id,
+          expires_at: MoreThan(new Date()),
+          used_at: IsNull(),
+        },
+        { used_at: new Date() },
+      );
+      if (!claim.affected) {
+        throw new BadRequestException('Invalid or expired password reset token');
+      }
+      await manager.getRepository(User).update(
+        { user_id: resetToken.user_id },
+        { password: hashedPassword },
+      );
+      await manager.getRepository(Session).update(
+        { user_id: resetToken.user_id, revoked_at: IsNull() },
+        { revoked_at: new Date() },
+      );
+      await tokenRepository.update(
+        { user_id: resetToken.user_id, used_at: IsNull() },
+        { used_at: new Date() },
+      );
+    });
   }
 
   async getActiveSession(

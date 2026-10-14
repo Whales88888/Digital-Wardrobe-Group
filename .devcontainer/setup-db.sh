@@ -156,6 +156,15 @@ if sudo mariadb "$DB_NAME" --batch --skip-column-names -e "SHOW TABLES LIKE 'use
 		printf 'The database has a partial roles/session migration. Back it up and inspect its schema before continuing.\n' >&2
 		exit 1
 	fi
+	PASSWORD_RESET_TABLE_COUNT="$(sudo mariadb "$DB_NAME" --batch --skip-column-names -e "
+		SELECT COUNT(*)
+		FROM information_schema.TABLES
+		WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME = 'password_reset_tokens';")"
+	if [[ "$PASSWORD_RESET_TABLE_COUNT" == "0" ]]; then
+		echo "=== Adding password reset tokens ==="
+		sudo mariadb "$DB_NAME" < "${ROOT_DIR}/sql/migrations/20261014_add_password_reset_tokens.sql"
+	fi
 	CLOTHING_FILTER_COLUMN_COUNT="$(sudo mariadb "$DB_NAME" --batch --skip-column-names -e "
 		SELECT COUNT(*)
 		FROM information_schema.COLUMNS

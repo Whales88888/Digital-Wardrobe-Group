@@ -1,16 +1,23 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { hash } from 'bcryptjs';
 import type { DataSource } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '../user/user.entity';
 import { UserService } from '../user/user.service';
 import { AuthService } from './auth.service';
+import { PasswordResetMailer } from './password-reset-mailer.service';
+import { PasswordResetToken } from './password-reset-token.entity';
 
 describe('AuthService', () => {
   let authService: AuthService;
-  let userService: jest.Mocked<Pick<UserService, 'create' | 'findByEmail' | 'findByIdWithPassword' | 'updatePassword'>>;
+  let userService: jest.Mocked<Pick<UserService, 'create' | 'findByEmail' | 'findByIdWithPassword' | 'updatePassword' | 'hashPassword'>>;
   let jwtService: jest.Mocked<Pick<JwtService, 'signAsync'>>;
   let sessionRepository: {
+    save: jest.Mock;
+    findOne: jest.Mock;
+    update: jest.Mock;
+  };
+  let resetTokenRepository: {
     save: jest.Mock;
     findOne: jest.Mock;
     update: jest.Mock;
@@ -22,6 +29,7 @@ describe('AuthService', () => {
       findByEmail: jest.fn(),
       findByIdWithPassword: jest.fn(),
       updatePassword: jest.fn(),
+      hashPassword: jest.fn().mockResolvedValue('hashed-password'),
     };
     jwtService = {
       signAsync: jest.fn().mockResolvedValue('signed-token'),
@@ -31,13 +39,26 @@ describe('AuthService', () => {
       findOne: jest.fn(),
       update: jest.fn(),
     };
+    resetTokenRepository = {
+      save: jest.fn().mockImplementation(async (token) => token),
+      findOne: jest.fn(),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
     const dataSource = {
-      getRepository: jest.fn().mockReturnValue(sessionRepository),
+      getRepository: jest.fn((entity: unknown) =>
+        entity === PasswordResetToken ? resetTokenRepository : sessionRepository,
+      ),
+      transaction: jest.fn(async (callback) => callback({
+        getRepository: jest.fn((entity: unknown) =>
+          entity === PasswordResetToken ? resetTokenRepository : sessionRepository,
+        ),
+      })),
     } as unknown as DataSource;
     authService = new AuthService(
       userService as UserService,
       jwtService as JwtService,
       dataSource,
+      { send: jest.fn() } as unknown as PasswordResetMailer,
     );
   });
 
@@ -162,5 +183,21 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(userService.updatePassword).not.toHaveBeenCalled();
     expect(sessionRepository.update).not.toHaveBeenCalled();
+  });
+
+  it('does not reveal whether an email exists when requesting password reset', async () => {
+    userService.findByEmail.mockResolvedValue(null);
+
+    await expect(
+      authService.requestPasswordReset('missing@example.com'),
+    ).resolves.toBeUndefined();
+    expect(resetTokenRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed reset tokens without changing passwords', async () => {
+    await expect(
+      authService.resetPassword('short', 'new-password-123'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(userService.hashPassword).not.toHaveBeenCalled();
   });
 });

@@ -15,6 +15,7 @@ import type {
   WardrobeDashboard,
   WardrobeRecommendation,
   User,
+  AdminUserPage,
 } from './types'
 
 export const authApi = {
@@ -34,6 +35,14 @@ export const authApi = {
     method: 'POST',
     body: jsonBody({ current_password, new_password }),
   }),
+  forgotPassword: (email: string) => request<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: jsonBody({ email }),
+  }),
+  resetPassword: (token: string, password: string) => request<{ success: boolean }>('/auth/reset-password', {
+    method: 'POST',
+    body: jsonBody({ token, password }),
+  }),
 }
 
 export const userApi = {
@@ -43,8 +52,21 @@ export const userApi = {
   }),
 }
 
+export const adminUsersApi = {
+  list: (page: number, page_size = 20) =>
+    request<AdminUserPage>(`/user/admin?page=${page}&page_size=${page_size}`),
+  changeRole: (id: number, role: 'user' | 'admin') =>
+    request(`/user/admin/${id}/role`, {
+      method: 'PATCH',
+      body: jsonBody({ role }),
+    }),
+  remove: (id: number) => request<void>(`/user/admin/${id}`, { method: 'DELETE' }),
+}
+
 export const categoriesApi = {
   list: () => request<Category[]>('/category'),
+  page: (page: number, page_size = 12) =>
+    request<PaginatedResult<Category>>(`/category/page?page=${page}&page_size=${page_size}`),
   usage: () => request<CategoryUsage[]>('/category/usage'),
   create: (name: string) => request<Category>('/category', {
     method: 'POST',
@@ -92,6 +114,8 @@ export const clothingApi = {
 
 export const outfitsApi = {
   list: () => request<Outfit[]>('/outfit'),
+  page: (page: number, page_size = 12) =>
+    request<PaginatedResult<Outfit>>(`/outfit/page?page=${page}&page_size=${page_size}`),
   get: (id: number) => request<Outfit>(`/outfit/${id}`),
   create: (data: OutfitInput) => request<Outfit>('/outfit', {
     method: 'POST',

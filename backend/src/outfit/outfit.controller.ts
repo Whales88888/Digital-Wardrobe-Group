@@ -6,11 +6,13 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
 import { Outfit } from './outfit.entity';
 import { OutfitService } from './outfit.service';
+import type { OutfitPageQuery } from './outfit.service';
 
 @Controller('outfit')
 export class OutfitController {
@@ -19,6 +21,14 @@ export class OutfitController {
   @Get()
   findAll(@CurrentUser() user: AuthenticatedUser) {
     return this.outfitService.findAll(user.sub);
+  }
+
+  @Get('page')
+  findPage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: OutfitPageQuery,
+  ) {
+    return this.outfitService.findPage(user.sub, query);
   }
 
   @Get(':id')

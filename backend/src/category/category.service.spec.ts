@@ -11,10 +11,12 @@ describe('CategoryService', () => {
     save: jest.fn(),
     update: jest.fn(),
     find: jest.fn(),
+    findAndCount: jest.fn(),
   };
   const dataSource = { query: jest.fn() };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CategoryService,
@@ -30,6 +32,25 @@ describe('CategoryService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('returns a bounded category page', async () => {
+    repository.findAndCount.mockResolvedValue([[], 13]);
+
+    await expect(
+      service.findPage({ page: '2', page_size: '10' }),
+    ).resolves.toMatchObject({
+      items: [],
+      page: 2,
+      page_size: 10,
+      total: 13,
+      total_pages: 2,
+    });
+    expect(repository.findAndCount).toHaveBeenCalledWith({
+      order: { name: 'ASC', category_id: 'ASC' },
+      skip: 10,
+      take: 10,
+    });
   });
 
   it('does not delete categories which are still used by clothing', async () => {

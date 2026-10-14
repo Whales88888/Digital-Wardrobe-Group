@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Query } from '@nestjs/common';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
-import { UserService, type ProfileUpdate } from './user.service';
+import { Roles } from '../auth/roles.decorator';
+import { UserService, type PageQuery, type ProfileUpdate } from './user.service';
 
 @Controller('user')
 export class UserController {
@@ -18,5 +19,27 @@ export class UserController {
     @Body() data: ProfileUpdate,
   ) {
     return this.userService.update(user.sub, data);
+  }
+
+  @Get('admin')
+  @Roles('admin')
+  listUsers(@Query() query: PageQuery) {
+    return this.userService.listUsers(query);
+  }
+
+  @Patch('admin/:id/role')
+  @Roles('admin')
+  changeRole(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() data: { role?: unknown },
+  ) {
+    return this.userService.changeRole(Number(id), user.sub, data?.role);
+  }
+
+  @Delete('admin/:id')
+  @Roles('admin')
+  deleteUser(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.userService.deleteUser(Number(id), user.sub);
   }
 }

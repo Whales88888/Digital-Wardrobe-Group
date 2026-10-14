@@ -18,5 +18,9 @@ describe('AppController', () => {
     it('should return "Hello World!"', () => {
       expect(appController.getHello()).toBe('Hello World!');
     });
+
+    it('reports the health endpoint as ready', () => {
+      expect(appController.getHealth()).toEqual({ status: 'ok' });
+    });
   });
 });

@@ -4,6 +4,8 @@ import RequireAuth from './auth/RequireAuth'
 import AppLayout from './layouts/AppLayout'
 import PublicLayout from './layouts/PublicLayout'
 import AuthPage from './pages/AuthPage'
+import PasswordResetPage from './pages/PasswordResetPage'
+import AdminUsersPage from './pages/AdminUsersPage'
 import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
 import DashboardPage from './pages/DashboardPage'
@@ -26,6 +28,8 @@ function App() {
             <Route path="about" element={<AboutPage />} />
             <Route path="login" element={<AuthPage mode="login" />} />
             <Route path="register" element={<AuthPage mode="register" />} />
+            <Route path="forgot-password" element={<PasswordResetPage mode="request" />} />
+            <Route path="reset-password" element={<PasswordResetPage mode="reset" />} />
           </Route>
           <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
           <Route path="/wardrobe" element={<Navigate to="/app/wardrobe" replace />} />
@@ -42,6 +46,7 @@ function App() {
               <Route path="outfits" element={<OutfitsPage />} />
               <Route path="planner" element={<ActivityPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="admin/users" element={<AdminUsersPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

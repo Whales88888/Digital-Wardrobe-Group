@@ -46,6 +46,21 @@ export class ClothingController {
     return new StreamableFile(image.buffer, { type: image.mimetype });
   }
 
+  @Get('images/:userId')
+  @Header('Cache-Control', 'private, no-store')
+  @Header('X-Content-Type-Options', 'nosniff')
+  async getCloudinaryImage(
+    @Param('userId') userId: string,
+    @Query('asset') publicId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<StreamableFile> {
+    if (!/^[1-9]\d*$/.test(userId) || Number(userId) !== user.sub) {
+      throw new NotFoundException('Image not found');
+    }
+    const image = await this.imageStorage.readCloudinary(user.sub, publicId);
+    return new StreamableFile(image.buffer, { type: image.mimetype });
+  }
+
   @Get()
   findAll(
     @CurrentUser() user: AuthenticatedUser,
@@ -92,7 +107,7 @@ export class ClothingController {
     @Body() data: Partial<Clothing>,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<Clothing | null> {
-    return this.clothingService.update(Number(id), data, user.sub);
+    return this.updateClothing(Number(id), data, user.sub);
   }
 
   @Delete(':id')
@@ -100,6 +115,29 @@ export class ClothingController {
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<void> {
-    return this.clothingService.remove(Number(id), user.sub);
+    return this.removeClothing(Number(id), user.sub);
+  }
+
+  private async updateClothing(
+    clothingId: number,
+    data: Partial<Clothing>,
+    userId: number,
+  ): Promise<Clothing | null> {
+    const existing = await this.clothingService.findOne(clothingId, userId);
+    const updated = await this.clothingService.update(clothingId, data, userId);
+    if (
+      existing?.image_url &&
+      data.image_url !== undefined &&
+      data.image_url !== existing.image_url
+    ) {
+      await this.imageStorage.delete(existing.image_url, userId);
+    }
+    return updated;
+  }
+
+  private async removeClothing(clothingId: number, userId: number): Promise<void> {
+    const existing = await this.clothingService.findOne(clothingId, userId);
+    await this.clothingService.remove(clothingId, userId);
+    await this.imageStorage.delete(existing?.image_url, userId);
   }
 }

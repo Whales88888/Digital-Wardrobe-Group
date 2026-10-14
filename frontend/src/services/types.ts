@@ -71,6 +71,10 @@ export interface PaginatedResult<T> {
   total_pages: number
 }
 
+export type AdminUser = User;
+
+export type AdminUserPage = PaginatedResult<AdminUser>;
+
 export interface Outfit {
   outfit_id: number
   user_id: number

@@ -5,6 +5,7 @@ import { Clothing } from '../clothing/clothing.entity';
 import { Outfit } from '../outfit/outfit.entity';
 import { OutfitItem } from '../outfit-item/outfit-item.entity';
 import { Session } from '../auth/session.entity';
+import { PasswordResetToken } from '../auth/password-reset-token.entity';
 import { WearLog } from '../activity/wear-log.entity';
 import { WearLogItem } from '../activity/wear-log-item.entity';
 import { OutfitPlan } from '../activity/outfit-plan.entity';
@@ -27,6 +28,7 @@ export const databaseProviders = [
           Outfit,
           OutfitItem,
           Session,
+          PasswordResetToken,
           WearLog,
           WearLogItem,
           OutfitPlan,

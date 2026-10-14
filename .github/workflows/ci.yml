@@ -7,6 +7,28 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: root-test-password
+          MARIADB_DATABASE: digital_wardrobe_e2e
+          MARIADB_USER: wardrobe
+          MARIADB_PASSWORD: wardrobe-test-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      E2E_DB_HOST: 127.0.0.1
+      E2E_DB_PORT: 3306
+      E2E_DB_USER: wardrobe
+      E2E_DB_PASSWORD: wardrobe-test-password
+      E2E_DB_NAME: digital_wardrobe_e2e
+      E2E_JWT_SECRET: ci-only-secret-at-least-32-characters
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -14,7 +36,11 @@ jobs:
           node-version: 24.9
       - run: npm ci --prefix backend
       - run: npm ci --prefix frontend
+      - run: node backend/test/setup-database.cjs
       - run: npm run lint
       - run: npm test
       - run: npm run test:e2e
+      - run: npm --prefix backend run test:e2e:db -- --runInBand
+      - run: ./frontend/node_modules/.bin/playwright install --with-deps chromium
+      - run: npm run test:browser
       - run: npm run build
