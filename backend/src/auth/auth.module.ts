@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule } from '@nestjs/throttler';
+import type { DataSource } from 'typeorm';
 import { UserModule } from '../user/user.module';
 import { DatabaseModule } from '../database/database.module';
 import { AuthController } from './auth.controller';
@@ -10,12 +11,20 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
 import { CsrfGuard } from './csrf.guard';
 import { PasswordResetMailer } from './password-reset-mailer.service';
+import { DatabaseThrottlerStorage } from './database-throttler.storage';
 
 @Module({
   imports: [
     DatabaseModule,
     UserModule,
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }]),
+    ThrottlerModule.forRootAsync({
+      imports: [DatabaseModule],
+      inject: ['DATA_SOURCE'],
+      useFactory: (dataSource: DataSource) => ({
+        throttlers: [{ ttl: 60_000, limit: 5 }],
+        storage: new DatabaseThrottlerStorage(dataSource),
+      }),
+    }),
     JwtModule.registerAsync({
       useFactory: () => {
         const secret = process.env.JWT_SECRET;

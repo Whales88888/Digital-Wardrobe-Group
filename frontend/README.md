@@ -1,6 +1,6 @@
 # Digital Wardrobe Frontend
 
-React, TypeScript, Vite and React Query frontend for the NestJS/MariaDB application. Sign-up and sign-in use an HttpOnly session cookie; the browser includes it on API requests but JavaScript cannot read it. A shared custom resource hook manages loading, errors, cache and retry behavior.
+React 19, TypeScript, Vite and TanStack React Query frontend for the NestJS/MariaDB application. Authentication uses an HttpOnly session cookie; the browser sends it with API requests, but JavaScript cannot read it. The shared resource hook manages loading, errors, cache and retry behavior.
 
 ## Run
 
@@ -22,9 +22,9 @@ Vite serves `http://localhost:5173` and proxies `/api` to NestJS at `http://127.
 
 ## Routes
 
-- Public: `/`, `/about`, `/login`, `/register`
-- Protected: `/app/dashboard`, `/app/wardrobe`, `/app/wardrobe/:id`, `/app/categories`, `/app/outfits`
-- Short aliases: `/dashboard`, `/wardrobe`, `/categories`, `/outfits` (redirect to protected pages)
+- Public: `/`, `/about`, `/login`, `/register`, `/forgot-password`, `/reset-password`
+- Protected: `/app/dashboard`, `/app/wardrobe`, `/app/wardrobe/:id`, `/app/categories`, `/app/outfits`, `/app/planner`, `/app/profile`, `/app/admin/users` (admin only)
+- Legacy redirects: `/dashboard`, `/wardrobe`, `/wardrobe/:id`, `/categories`, `/outfits`
 
 ## Configuration
 
@@ -37,18 +37,21 @@ npm --prefix frontend run lint
 npm --prefix frontend test
 npm --prefix frontend run build
 npm --prefix frontend run preview
+npm --prefix frontend run test:e2e
 ```
 
-For deployment, configure a same-origin `/api` reverse proxy to NestJS and strip the `/api` prefix.
+For deployment, configure a same-origin `/api` reverse proxy to NestJS and strip the `/api` prefix. Production must use HTTPS so the session cookie's `Secure` flag works.
 
-## API Coverage and Limitations
+## API coverage and limitations
 
-- Authentication: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/session` and `POST /api/auth/logout`.
-- User profile: `GET` and `PATCH /api/user/me`.
-- Categories: authenticated GET for all users; POST, PATCH and DELETE require the `admin` role.
-- Clothing, outfits and outfit items: authenticated CRUD; clothing and outfits belong to the signed-in user.
-- Clothing upload: authenticated Cloudinary upload for JPEG, PNG and WebP, limited to 5 MB.
-- Clothing filters/pagination: category, season, type; 24 results per page by default and at most 100 per request.
-- Clothing fields: `category_id`, `name`, `color`, `size`, `image_url`, `season` and `clothing_type`.
+- Authentication: registration, login, session check, logout, password change and password-reset request/confirmation (`/api/auth/*`).
+- Profile and administration: read/update the current user (`/api/user/me`); paginated user listing, role changes and account deletion require admin access (`/api/user/admin/*`).
+- Categories: authenticated reads; create, update and delete require the `admin` role.
+- Wardrobe: owner-scoped CRUD for clothing, outfits and outfit items.
+- Images: authenticated JPEG, PNG and WebP upload, up to 5 MB. Development stores images locally; production can use authenticated Cloudinary storage when configured. Reads are served through owner-checked API routes.
+- Activity: dashboard, personal recommendations, wear logs, outfit plans and clothing-care updates (`/api/activity/*`).
+- Clothing search and pagination: filter by category, season and type; search name, color and size; 24 results per page by default and at most 100 per request.
 
-Deletion relies on database foreign-key cascades. Apply the updated SQL schema to new databases or migrate existing foreign keys before relying on cascade behavior.
+Recommendations use explicit rules, not AI/ML. Calendar and care reminders are shown in the application; push/email reminders and external calendar synchronization are not implemented.
+
+See the [root README](../README.md) for the complete API table, setup, security notes, database migrations, test-environment safety and known limitations.

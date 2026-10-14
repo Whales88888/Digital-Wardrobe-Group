@@ -132,7 +132,8 @@ Các endpoint dữ liệu yêu cầu cookie đăng nhập. Prefix `/api` là c�
 - Quên mật khẩu dùng token ngẫu nhiên một lần, chỉ lưu SHA-256, hết hạn sau 30 phút và thu hồi mọi phiên sau khi reset. SMTP chưa cấu hình thì hệ thống ghi lỗi gửi mail phía server nhưng vẫn trả thông báo trung tính để không làm lộ email có tài khoản hay không.
 - JWT phiên được đặt trong cookie `HttpOnly`, `SameSite=Lax`, `Secure` ở production; thời hạn 15 phút.
 - JWT chứa session ID; server kiểm tra session còn hiệu lực trong database cho request được bảo vệ. Logout thu hồi session ở server.
-- Đăng nhập và đăng ký giới hạn 5 lần/phút cho mỗi IP; vượt giới hạn trả HTTP `429`. Bộ đếm dùng storage trong bộ nhớ của tiến trình, nên triển khai nhiều API replicas cần chuyển sang storage dùng chung.
+- Đăng nhập và đăng ký giới hạn 5 lần/phút cho mỗi IP; yêu cầu reset mật khẩu giới hạn riêng. Bộ đếm được lưu trong MariaDB để chia sẻ giữa các API replicas; schema mới tạo sẵn bảng, database cũ cần migration `20261014_add_shared_rate_limits.sql`.
+- Khi đặt API sau reverse proxy, cấu hình `TRUST_PROXY_HOPS` bằng đúng số proxy tin cậy tính từ API; không tin giá trị `X-Forwarded-For` từ client trực tiếp.
 - Cookie flags, HTTPS và khả năng thu hồi phiên giảm rủi ro chiếm dụng/tái sử dụng phiên; `HttpOnly` không bảo vệ thiết bị hoặc trình duyệt đã bị xâm nhập.
 - CSRF guard yêu cầu `X-Wardrobe-Request: 1` với request thay đổi dữ liệu.
 - Vai trò `admin` giới hạn quyền sửa danh mục.
@@ -140,7 +141,7 @@ Các endpoint dữ liệu yêu cầu cookie đăng nhập. Prefix `/api` là c�
 - Ảnh development lưu local theo user. Ảnh upload lên Cloudinary dùng delivery `authenticated`, chỉ được đọc qua API có session và kiểm tra chủ sở hữu; ảnh được xóa khi thay ảnh hoặc xóa món đồ. URL ảnh do người dùng nhập thủ công vẫn do host bên ngoài kiểm soát; ảnh Cloudinary đã upload trước khi chuyển sang chế độ private cần được xử lý riêng.
 - Thông báo lỗi máy chủ không trả stack trace/database detail cho trình duyệt.
 
-Đây là biện pháp hiện có, không phải chứng nhận bảo mật. Trước production cần cấu hình SMTP, HTTPS và quản lý admin an toàn; nếu chạy nhiều API replicas, cần dùng storage rate-limit dùng chung.
+Đây là biện pháp hiện có, không phải chứng nhận bảo mật. Trước production cần cấu hình SMTP, HTTPS, quản lý admin an toàn, backup/restore đã thử nghiệm và rà soát ảnh Cloudinary cũ.
 
 ## 7. Luật – Đạo đức – Nghề nghiệp
 
@@ -181,15 +182,42 @@ Mở URL Vite (thường `http://localhost:5173`). Vite proxy `/api` tới NestJ
 
 ### Docker Compose
 
-Chuẩn bị `.env` gốc và `backend/.env` từ các file mẫu, điền các mật khẩu/secret thật rồi chạy:
+Chuẩn bị `.env` gốc và `backend/.env` từ các file mẫu, điền các mật khẩu/secret thật rồi chạy. Mẫu `.env` gốc chọn `NODE_ENV=production`, HTTPS phải được kết thúc tại reverse proxy/load balancer tin cậy trước `web`; không mở API hoặc MariaDB trực tiếp ra Internet. Nếu truy cập qua số proxy khác, đặt `TRUST_PROXY_HOPS` thành số hop thực tế. Chỉ dùng `NODE_ENV=development` cho máy local; chế độ production yêu cầu Cloudinary để upload ảnh.
 
 ```bash
 docker compose up --build -d
 ```
 
-Ứng dụng phục vụ tại `http://localhost:8080`; MariaDB lưu trong volume. Production cần HTTPS để cookie `Secure` hoạt động.
+Ứng dụng phục vụ tại `http://localhost:8080` sau khi khởi động; MariaDB lưu trong volume. Khi có TLS proxy, chỉ cho phép truy cập qua hostname HTTPS để cookie `Secure` hoạt động.
 
-Với database cũ, sao lưu trước rồi áp dụng các migration trong [sql/migrations/](./sql/migrations/) theo thứ tự; không chạy lại migration đã áp dụng.
+Với database cũ, sao lưu trước rồi áp dụng các migration trong [sql/migrations/](./sql/migrations/) theo thứ tự; không chạy lại migration đã áp dụng. Thử migration và khôi phục trên bản sao staging trước khi nâng cấp production.
+
+### Production: email, backup và khôi phục
+
+- Cấu hình SMTP bằng secret manager hoặc môi trường triển khai; không commit credentials. Trước khi mở dịch vụ, gửi thử email reset từ staging và xác minh link trỏ đúng `FRONTEND_URL`.
+- Đặt `JWT_SECRET` ngẫu nhiên, tối thiểu 32 ký tự; giới hạn quyền database cho user ứng dụng, bảo vệ admin đầu tiên và bật HTTPS ở ingress.
+- Backup MariaDB thường xuyên, mã hóa và lưu ngoài máy chủ; đặt retention phù hợp. Ví dụ khi các biến DB được export trong shell, lệnh sau hỏi mật khẩu DB và ghi file vào thư mục bị Git bỏ qua:
+
+```bash
+mkdir -p backups
+set -o pipefail
+mariadb-dump --single-transaction --routines --triggers \
+  --host "$DB_HOST" --user "$DB_USER" -p "$DB_NAME" \
+  | gzip > "backups/digital_wardrobe_$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+```
+
+Khôi phục chỉ trên database đích đã xác minh (không dùng lệnh này trực tiếp trên production đang hoạt động); trước hết dựng database trống ở staging:
+
+```bash
+gzip -dc backups/digital_wardrobe_<timestamp>.sql.gz \
+  | mariadb --host "$DB_HOST" --user "$DB_USER" -p "$DB_NAME"
+```
+
+Định kỳ diễn tập khôi phục, kiểm tra đăng nhập/dữ liệu/ảnh sau restore và ghi nhận thời gian khôi phục. Database backup không chứa Cloudinary media; cấu hình backup/retention riêng cho Cloudinary và xác nhận ảnh có thể đọc lại.
+
+### Rà soát Cloudinary khi nâng cấp
+
+Trước khi xóa hoặc chuyển ảnh từng được public: backup database, xuất danh sách asset Cloudinary và so sánh với `clothing.image_url`. Chuyển asset còn dùng sang delivery `authenticated`, cập nhật `image_url` để đi qua endpoint owner-checked của API, rồi kiểm tra đọc bằng tài khoản sở hữu và từ chối truy cập tài khoản khác. Chỉ xóa asset orphan sau khi xác nhận không còn bản ghi tham chiếu và backup có thể khôi phục. Việc xóa tài khoản hiện cascade dữ liệu MariaDB nhưng không tự dọn toàn bộ Cloudinary assets; cần xử lý asset của các tài khoản đã xóa qua quy trình quản trị Cloudinary.
 
 ## 9. Kiểm thử và kiểm tra
 
@@ -227,14 +255,14 @@ npm run test:browser
 
 Playwright tự khởi chạy API và frontend trên cổng riêng, không dùng lại server đang chạy và trỏ proxy tới API E2E. Cài Chromium trước bằng `./frontend/node_modules/.bin/playwright install --with-deps chromium`. Browser test tạo tài khoản/dữ liệu thử nghiệm trong database E2E; tuyệt đối không cấp cho user này quyền trên database có dữ liệu thật. CI tạo MariaDB dùng một lần, nạp schema, rồi chạy unit, HTTP, database và browser tests cùng lint/build.
 
-Lần kiểm tra local: backend **18 suites / 58 tests**, frontend **1 file / 7 tests**, HTTP integration **4 tests**, MariaDB integration **1 test** và browser E2E **1 test** đều đạt; lint/build cũng thành công.
+Lần kiểm tra local: backend **19 suites / 62 tests**, frontend **1 file / 7 tests**, HTTP integration **4 tests**, MariaDB integration **1 test** và browser E2E **1 test** đều đạt; lint/build cũng thành công. Sau thay đổi rate-limit, backend unit suite, frontend lint/test/build và backend build/lint đã chạy lại; MariaDB/browser E2E chưa chạy lại trong lượt này.
 
 ## 10. Giới hạn đã biết
 
 - Gợi ý là heuristic, không dùng AI; lịch chưa gửi thông báo hoặc đồng bộ lịch ngoài.
 - Reset mật khẩu gửi email qua SMTP; triển khai thực tế cần cấu hình SMTP và bảo vệ credentials.
 - Nhắc lịch/chăm sóc hiện hiển thị trong dashboard; chưa có push/email notification hoặc đồng bộ calendar.
-- Rate limiter lưu trong bộ nhớ; nhiều API replicas cần Redis hoặc storage dùng chung.
+- Rate limiter dùng bảng MariaDB chia sẻ giữa replicas; bảng đã thêm cho schema mới và có migration cho database cũ.
 - Xóa tài khoản cascade dữ liệu trong MariaDB nhưng chưa tự dọn Cloudinary assets của toàn bộ tài khoản; ảnh Cloudinary cũ cũng cần chuyển sang private delivery theo quy trình riêng.
 - NoSQL và Graph được phân tích trong báo cáo nhưng không triển khai; MariaDB là database duy nhất đang chạy.
 
