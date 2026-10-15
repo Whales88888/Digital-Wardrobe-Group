@@ -28,10 +28,6 @@ export class DatabaseThrottlerStorage implements ThrottlerStorage {
     blockDuration: number,
     throttlerName: string,
   ): Promise<CounterRecord> {
-    if (blockDuration !== 0) {
-      throw new Error('Database throttling storage does not support block durations');
-    }
-
     const queryRunner = this.dataSource.createQueryRunner();
     try {
       await queryRunner.connect();

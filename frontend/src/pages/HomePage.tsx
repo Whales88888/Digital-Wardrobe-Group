@@ -1,11 +1,13 @@
-import { ArrowRight, Layers3, ListChecks, Scissors } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ArrowRight, CalendarDays, Layers3, ListChecks, Search, Shirt, Sparkles } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Button, Card, Col, Container, Form, Row } from 'react-bootstrap'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import Carousel from '../components/Carousel'
 import ClothingImage from '../components/ClothingImage'
 import { ErrorState, LoadingState } from '../components/States'
 import { useResource } from '../hooks/useResource'
 import { categoriesApi, clothingApi, listAllClothing, outfitItemsApi, outfitsApi } from '../services/wardrobe'
+import { clothingTypes } from '../services/types'
 
 function CollectionPreview() {
   const clothing = useResource(['clothing', 'preview'], () => clothingApi.list({ page_size: 3 }))
@@ -64,53 +66,161 @@ function OutfitPreview() {
   </section>
 }
 
-const bannerImages = [
-  {
-    text: 'A wardrobe that feels like you',
-    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=2100&q=88',
-  },
-  {
-    text: 'Find new ways to wear what you own',
-    image: 'https://cdn2.fptshop.com.vn/unsafe/Uploads/images/tin-tuc/176898/Originals/anh-bia-thoi-trang%20(14).jpg',
-  },
-  {
-    text: 'Make every piece part of your story',
-    image: 'https://cdn2.fptshop.com.vn/unsafe/Uploads/images/tin-tuc/176898/Originals/anh-bia-thoi-trang%20(2).jpg',
-  },
+const typeCards = [
+  { type: 'top', title: 'Tops', image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=720&q=85' },
+  { type: 'bottom', title: 'Bottoms', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=720&q=85' },
+  { type: 'outerwear', title: 'Outerwear', image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=720&q=85' },
+  { type: 'dress', title: 'Dresses', image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=720&q=85' },
+  { type: 'shoes', title: 'Shoes', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=720&q=85' },
+  { type: 'accessory', title: 'Accessories', image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=720&q=85' },
 ]
+
+const heroImages = [
+  { src: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1100&q=88', alt: 'Friends exploring personal style together' },
+  { src: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1100&q=88', alt: 'A colorful street-style outfit' },
+  { src: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1100&q=88', alt: 'A thoughtfully styled fashion look' },
+]
+
+function HomeHeroCarousel() {
+  const [activeImage, setActiveImage] = useState(0)
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const interval = window.setInterval(() => {
+      setActiveImage((current) => (current + 1) % heroImages.length)
+    }, 4500)
+    return () => window.clearInterval(interval)
+  }, [])
+
+  return <div className="search-hero-image" role="region" aria-roledescription="carousel" aria-label="Wardrobe inspiration">
+    {heroImages.map((image, index) => <img
+      key={image.src}
+      className={`search-hero-slide ${index === activeImage ? 'is-active' : ''}`}
+      src={image.src}
+      alt={image.alt}
+      aria-hidden={index !== activeImage}
+    />)}
+    <div className="search-hero-carousel-controls" role="group" aria-label="Choose banner image">
+      <div className="search-hero-indicators">
+        {heroImages.map((image, index) => <button
+          key={image.src}
+          type="button"
+          className={index === activeImage ? 'is-active' : ''}
+          aria-label={`Show banner image ${index + 1}`}
+          aria-pressed={index === activeImage}
+          onClick={() => setActiveImage(index)}
+        />)}
+      </div>
+    </div>
+  </div>
+}
 
 export default function HomePage() {
   const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
+  const [type, setType] = useState('')
 
-  return <main>
-    <section className="home-hero" aria-labelledby="home-title">
-      <Carousel images={bannerImages} />
-      <div className="hero-content">
-        <span className="eyebrow">A considered closet</span>
-        <h1 id="home-title">Your wardrobe,<span>reimagined.</span></h1>
-        <p>Bring every piece into view. Keep your collection considered, your combinations close, and your everyday style unmistakably yours.</p>
-        <Link className="button-primary" to={isAuthenticated ? '/app/wardrobe' : '/register'}>
-          {isAuthenticated ? 'Explore My Wardrobe' : 'Create your account'} <ArrowRight size={15} aria-hidden="true" />
-        </Link>
-      </div>
-      <span className="hero-note">A more thoughtful way to get dressed</span>
+  function wardrobePath(selectedType = type) {
+    const params = new URLSearchParams()
+    if (query.trim()) params.set('search', query.trim())
+    if (selectedType) params.set('type', selectedType)
+    const suffix = params.size ? `?${params.toString()}` : ''
+    return `/app/wardrobe${suffix}`
+  }
+
+  function searchWardrobe(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    navigate(isAuthenticated ? wardrobePath() : '/login')
+  }
+
+  return <main className="search-home">
+    <section className="search-home-hero" aria-labelledby="home-title">
+      <Container className="search-home-container">
+        <Row className="align-items-center g-4 g-lg-1 search-hero-row">
+          <Col xs={12} lg={5}>
+            <div className="search-hero-copy">
+              <span className="home-kicker"><Sparkles size={14} aria-hidden="true" /> A wardrobe that works for you</span>
+              <h1 id="home-title">Get dressed with <span>what you love.</span></h1>
+              <p>Keep every piece close, find fresh combinations, and make getting ready feel easy.</p>
+              <Link className="hero-text-link" to={isAuthenticated ? '/app/wardrobe' : '/register'}>
+                {isAuthenticated ? 'Open my wardrobe' : 'Start your wardrobe'} <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+            </div>
+          </Col>
+          <Col xs={12} lg={7}>
+            <HomeHeroCarousel />
+          </Col>
+        </Row>
+
+        <Form className="wardrobe-search" onSubmit={searchWardrobe}>
+          <Row className="g-2 g-lg-0 align-items-end">
+            <Col xs={12} md={6} lg={6}>
+              <Form.Group className="home-search-field">
+                <Form.Label htmlFor="wardrobe-search-query">What are you looking for?</Form.Label>
+                <div className="home-search-input">
+                  <Search size={19} aria-hidden="true" />
+                  <Form.Control id="wardrobe-search-query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Try ‘linen shirt’ or ‘black jacket’" />
+                </div>
+              </Form.Group>
+            </Col>
+            <Col xs={12} md={4} lg={3}>
+              <Form.Group className="home-search-field">
+                <Form.Label htmlFor="wardrobe-search-type">Clothing type</Form.Label>
+                <div className="home-search-select">
+                  <Shirt size={18} aria-hidden="true" />
+                  <Form.Select id="wardrobe-search-type" value={type} onChange={(event) => setType(event.target.value)}>
+                    <option value="">All pieces</option>
+                    {clothingTypes.map((option) => <option key={option} value={option}>{option.charAt(0).toUpperCase() + option.slice(1)}</option>)}
+                  </Form.Select>
+                </div>
+              </Form.Group>
+            </Col>
+            <Col xs={12} md={2} lg={3}>
+              <Button type="submit" className="home-search-submit">
+                <Search size={17} aria-hidden="true" /> {isAuthenticated ? 'Search wardrobe' : 'Sign in to search'}
+              </Button>
+            </Col>
+          </Row>
+        </Form>
+      </Container>
     </section>
-    <section className="home-section" id="approach">
-      <div className="section-heading">
-        <div><span className="eyebrow">Designed around what you own</span><h2>Less searching.<br />More wearing.</h2></div>
-        <p>A quiet place for the pieces you reach for, the combinations you love, and the details that make getting dressed feel effortless.</p>
-      </div>
-      <div className="feature-band">
-        <article className="feature-item"><span className="feature-icon"><Layers3 size={18} aria-hidden="true" /></span><h3>One considered collection</h3><p>Keep clothing and categories together, with useful details close at hand.</p></article>
-        <article className="feature-item"><span className="feature-icon"><ListChecks size={18} aria-hidden="true" /></span><h3>See what you reach for</h3><p>Search and filter your collection to find the right piece without the rummage.</p></article>
-        <article className="feature-item"><span className="feature-icon"><Scissors size={18} aria-hidden="true" /></span><h3>Keep outfits in view</h3><p>Save combinations from the clothing already in your wardrobe.</p></article>
-      </div>
+
+    <section className="home-section home-category-section" id="approach">
+      <Container className="search-home-container">
+        <div className="home-section-heading">
+          <div><span className="eyebrow">Start exploring</span><h2>Browse your wardrobe</h2><p>Go straight to the pieces you want to wear.</p></div>
+          <Link className="text-link" to={isAuthenticated ? '/app/wardrobe' : '/login'}>View all pieces <ArrowRight size={15} aria-hidden="true" /></Link>
+        </div>
+        <Row className="g-3 g-md-4 home-type-grid">
+          {typeCards.map((item) => <Col xs={6} md={4} lg={2} key={item.type}>
+            <Link className="home-type-link" to={isAuthenticated ? wardrobePath(item.type) : '/login'}>
+              <Card className="home-type-card">
+                <Card.Img variant="top" src={item.image} alt={item.title} />
+                <Card.Body><Card.Title>{item.title}</Card.Title></Card.Body>
+              </Card>
+            </Link>
+          </Col>)}
+        </Row>
+      </Container>
     </section>
+
+    <section className="home-value-band">
+      <Container className="search-home-container">
+        <Row className="g-4">
+          <Col xs={12} md={4}><article className="home-value-item"><span><Layers3 size={19} aria-hidden="true" /></span><div><h3>One place for every piece</h3><p>Keep details, categories, and care notes together.</p></div></article></Col>
+          <Col xs={12} md={4}><article className="home-value-item"><span><ListChecks size={19} aria-hidden="true" /></span><div><h3>Find it in a moment</h3><p>Search and filter your collection without the rummage.</p></div></article></Col>
+          <Col xs={12} md={4}><article className="home-value-item"><span><CalendarDays size={19} aria-hidden="true" /></span><div><h3>Plan what to wear</h3><p>Save combinations and keep your outfit ideas close.</p></div></article></Col>
+        </Row>
+      </Container>
+    </section>
+
     {isAuthenticated
-      ? <><CollectionPreview /><OutfitPreview /></>
+      ? <div id="collection"><CollectionPreview /><div id="outfits"><OutfitPreview /></div></div>
       : <section className="home-section preview-section" id="collection">
-        <div className="section-heading"><div><span className="eyebrow">Your collection</span><h2>Pieces with a place.</h2></div></div>
-        <div className="preview-message">Sign in to see your collection. <Link to="/login">Sign in <ArrowRight size={14} aria-hidden="true" /></Link></div>
+        <Container className="search-home-container">
+          <div className="home-signin-strip"><div><span className="eyebrow">Make it yours</span><h2>Your collection starts here.</h2><p>Add the pieces you own and discover new ways to wear them.</p></div><Link className="button-primary" to="/register">Create your wardrobe <ArrowRight size={15} aria-hidden="true" /></Link></div>
+        </Container>
       </section>}
   </main>
 }

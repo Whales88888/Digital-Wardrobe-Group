@@ -184,8 +184,8 @@ function ClothingCard({
 
 export function WardrobePage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [query, setQuery] = useState('')
-  const [search, setSearch] = useState('')
+  const [query, setQuery] = useState(() => searchParams.get('search') ?? '')
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '')
   const [sort, setSort] = useState<'name' | 'color'>('name')
   const [editing, setEditing] = useState<Clothing | 'new' | null>(null)
   const [busy, setBusy] = useState(false)

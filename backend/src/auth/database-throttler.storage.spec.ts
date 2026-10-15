@@ -90,9 +90,22 @@ describe('DatabaseThrottlerStorage', () => {
     expect(queryRunner.release).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects unsupported block-duration configuration', async () => {
+  it('supports non-zero block durations without rejecting the request', async () => {
+    query
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce([{ total_hits: '5', time_to_expire: '42' }]);
+
     await expect(
       storage.increment('client-key', 60_000, 5, 10_000, 'default'),
-    ).rejects.toThrow('Database throttling storage does not support block durations');
+    ).resolves.toEqual({
+      totalHits: 6,
+      timeToExpire: 42,
+      isBlocked: true,
+      timeToBlockExpire: 42,
+    });
+    expect(queryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+    expect(queryRunner.release).toHaveBeenCalledTimes(1);
   });
 });
