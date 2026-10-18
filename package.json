@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Digital Wardrobe clothing collection and outfit planner.",
   "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run start:dev",
     "build": "npm --prefix frontend run build && npm --prefix backend run build",
     "lint": "npm --prefix frontend run lint && npm --prefix backend run lint",
     "test": "npm --prefix frontend test && npm --prefix backend test -- --runInBand",
