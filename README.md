@@ -1,4 +1,4 @@
-# Hệ Thống Quản Lý Tủ Quần Áo Thông Minh (Digital Wardrobe)
+# Xây dựng phát triển hệ thống quản lý tủ quần áo thông minh
 
 Ứng dụng web toàn diện giúp người dùng số hóa tủ đồ cá nhân, quản lý quần áo, phối đồ (outfit), lên kế hoạch trang phục hàng ngày, ghi nhật ký mặc đồ và nhận gợi ý phối đồ thông minh dựa trên dữ liệu thực tế.
 
@@ -110,25 +110,23 @@ erDiagram
 
 Các endpoint yêu cầu xác thực phiên qua Cookie `HttpOnly`. Tiền tố `/api` được cấu hình qua proxy của Frontend:
 
-| Nhóm | Phương thức & Route | Chức năng |
+| Group | Method & Route | Mục đích / Chức năng |
 |---|---|---|
-| **Auth** | `POST /auth/register` | Đăng ký tài khoản mới |
-| **Auth** | `POST /auth/login` | Đăng nhập và khởi tạo phiên |
-| **Auth** | `GET /auth/session` | Kiểm tra trạng thái phiên làm việc hiện tại |
-| **Auth** | `POST /auth/logout` | Đăng xuất và thu hồi phiên trên máy chủ |
-| **Auth** | `POST /auth/change-password` | Đổi mật khẩu (yêu cầu mật khẩu cũ) |
-| **Profile** | `GET/PATCH /user/me` | Xem và cập nhật thông tin cá nhân |
-| **Quần áo** | `GET /clothing` | Danh sách quần áo (hỗ trợ tìm kiếm, lọc, phân trang) |
-| **Quần áo** | `POST /clothing` | Thêm món đồ mới |
-| **Quần áo** | `GET/PATCH/DELETE /clothing/:id` | Xem chi tiết, cập nhật hoặc xóa món đồ |
-| **Hình ảnh** | `POST /clothing/images` | Upload ảnh quần áo (hỗ trợ JPEG/PNG/WebP tối đa 5MB) |
-| **Danh mục** | `GET /category` | Lấy danh sách danh mục phân loại |
-| **Trang phục** | `GET/POST /outfit` | Xem danh sách và tạo bộ outfit mới |
-| **Trang phục** | `GET/PATCH/DELETE /outfit/:id` | Xem chi tiết, chỉnh sửa hoặc xóa bộ outfit |
-| **Hoạt động** | `GET /activity/dashboard` | Thống kê số lượng, tỷ lệ sử dụng, lời nhắc chăm sóc |
-| **Hoạt động** | `GET /activity/recommendations` | Nhận gợi ý phối đồ tự động theo luật |
-| **Nhật ký** | `GET/POST /activity/logs` | Xem và ghi nhật ký mặc đồ theo ngày |
-| **Kế hoạch** | `GET/POST /activity/plans` | Xem lịch và lên kế hoạch trang phục tương lai |
+| **Auth** | `POST /auth/register`, `POST /auth/login` | Tạo tài khoản, đăng nhập và khởi tạo phiên |
+| **Auth** | `GET /auth/session`, `POST /auth/logout`, `POST /auth/change-password` | Kiểm tra trạng thái phiên, đăng xuất, đổi mật khẩu |
+| **Auth** | `POST /auth/forgot-password`, `POST /auth/reset-password` | Gửi và xác thực token đặt lại mật khẩu |
+| **Profile** | `GET/PATCH /user/me` | Xem và cập nhật hồ sơ người dùng hiện tại |
+| **Admin User** | `GET /user/admin`, `PATCH /user/admin/:id/role`, `DELETE /user/admin/:id` | Phân trang danh sách, cập nhật vai trò, xóa tài khoản (chỉ admin) |
+| **Clothing** | `GET/POST /clothing`, `GET/PATCH/DELETE /clothing/:id` | CRUD quần áo, lọc theo danh mục/mùa/loại, tìm kiếm và phân trang |
+| **Images** | `POST /clothing/images` | Upload ảnh quần áo (hỗ trợ JPEG/PNG/WebP, tối đa 5 MB) |
+| **Category** | `GET /category`, `GET /category/page`, `GET /category/:id` | Đọc danh mục, phân trang |
+| **Category (Admin)** | `POST/PATCH/DELETE /category[/:id]` | Thêm, sửa, xóa danh mục (chỉ admin) |
+| **Outfit** | `GET /outfit/page`, `GET/POST /outfit`, `GET/PATCH/DELETE /outfit/:id` | CRUD bộ trang phục và phân trang |
+| **Outfit Item** | `GET/POST /outfit-item`, `GET/PATCH/DELETE /outfit-item/:id` | Thêm, sửa, xóa từng món đồ trong outfit |
+| **Dashboard** | `GET /activity/dashboard`, `GET /activity/recommendations` | Thống kê số lượng, mức sử dụng và gợi ý phối đồ theo luật |
+| **Wear Logs** | `GET/POST /activity/logs`, `PATCH/DELETE /activity/logs/:id` | CRUD lịch sử và nhật ký mặc đồ theo ngày |
+| **Outfit Plans** | `GET/POST /activity/plans`, `PATCH/DELETE /activity/plans/:id` | CRUD kế hoạch outfit theo ngày/dịp (lọc tối đa 366 ngày) |
+| **Clothing Care** | `PATCH /activity/clothing/:id/care` | Cập nhật ngày giặt, ngưỡng nhắc và hướng dẫn chăm sóc |
 
 ---
 
