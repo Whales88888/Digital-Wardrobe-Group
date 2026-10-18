@@ -67,18 +67,18 @@ function OutfitPreview() {
 }
 
 const typeCards = [
-  { type: 'top', title: 'Tops', image: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=720&q=85' },
-  { type: 'bottom', title: 'Bottoms', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=720&q=85' },
-  { type: 'outerwear', title: 'Outerwear', image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=720&q=85' },
-  { type: 'dress', title: 'Dresses', image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=720&q=85' },
-  { type: 'shoes', title: 'Shoes', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=720&q=85' },
-  { type: 'accessory', title: 'Accessories', image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=720&q=85' },
+  { type: 'top', title: 'Tops', image: 'https://cdn.hstatic.net/products/200001023102/whenever0222_13123ea2c9c3427e977cfc855058fb9c_grande.jpg' },
+  { type: 'bottom', title: 'Bottoms', image: 'https://cdn.hstatic.net/products/200001023102/whenever0246_58362f6ddb3641f98130dae1a3da1765_1024x1024.jpg' },
+  { type: 'outerwear', title: 'Outerwear', image: 'https://cdn.dafc.com.vn/catalog/product/dafc/1227595_000.jpg' },
+  { type: 'dress', title: 'Dresses', image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK9yEtTS8OLnF8oZ0oRTzA7CLhyBw6P1ZflY_oNZCFXA&s=10' },
+  { type: 'shoes', title: 'Shoes', image: 'https://cdn.dafc.com.vn/catalog/product/dafc/1180151_000_6a09a35701254.jpg' },
+  { type: 'accessory', title: 'Accessories', image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS3T4RJSak8pMCN-tOOX5F_qDfguUfP7DC_lY5T5MOKUA&s=10' },
 ]
 
 const heroImages = [
-  { src: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1100&q=88', alt: 'Friends exploring personal style together' },
-  { src: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1100&q=88', alt: 'A colorful street-style outfit' },
-  { src: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?auto=format&fit=crop&w=1100&q=88', alt: 'A thoughtfully styled fashion look' },
+  { src: 'https://blankroom.co/cdn/shop/articles/bst-hermes-resort-2027_c85e106f-a08f-4cc2-8b90-cc1e2f9f7a12.png?v=1781490350', alt: 'Friends exploring personal style together' },
+  { src: 'https://online.fliphtml5.com/templates/iwwq/files/fashion-forward-trending-clothing-lookbook-template-layout.png?t=1790694062', alt: 'A colorful street-style outfit' },
+  { src: 'https://pendecor.vn/uploads/files/2024/03/21/thiet-ke-shop-quan-ao-3.jpg', alt: 'A thoughtfully styled fashion look' },
 ]
 
 function HomeHeroCarousel() {
