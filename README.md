@@ -1,65 +1,92 @@
-# Xây dựng và phát triển hệ thống quản lý tủ quần áo thông minh
+# Hệ Thống Quản Lý Tủ Quần Áo Thông Minh (Digital Wardrobe)
 
-Xây dựng ứng dụng web để số hóa tủ quần áo, quản lý outfit, ghi lại lịch sử mặc, lập lịch phối đồ, xem thống kê và nhận gợi ý phối đồ theo luật.
+Ứng dụng web toàn diện giúp người dùng số hóa tủ đồ cá nhân, quản lý quần áo, phối đồ (outfit), lên kế hoạch trang phục hàng ngày, ghi nhật ký mặc đồ và nhận gợi ý phối đồ thông minh dựa trên dữ liệu thực tế.
 
-## 1. Mục tiêu và phạm vi
+---
 
-Ứng dụng cho phép người dùng:
+## 📑 Mục Lục
+- [1. Mục tiêu và Phạm vi](#1-mục-tiêu-và-phạm-vi)
+- [2. Công nghệ sử dụng](#2-công-nghệ-sử-dụng)
+- [3. Kiến trúc hệ thống](#3-kiến-trúc-hệ-thống)
+- [4. Cơ sở dữ liệu và Mô hình quan hệ](#4-cơ-sở-dữ-liệu-và-mô-hình-quan-hệ)
+- [5. Danh sách API chính](#5-danh-sách-api-chính)
+- [6. Cơ chế Bảo mật](#6-cơ-chế-bảo-mật)
+- [7. Hướng dẫn cài đặt và khởi chạy](#7-hướng-dẫn-cài-đặt-và-khởi-chạy)
+- [8. Kiểm thử và Kiểm tra chất lượng](#8-kiểm-thử-và-kiểm-tra-chất-lượng)
+- [9. Giới hạn đã biết](#9-giới-hạn-đã-biết)
+- [10. Tài liệu tham khảo](#10-tài-liệu-tham-khảo)
+- [11. Ảnh minh chứng](#11-ảnh-minh-chứng)
 
-- Đăng ký, đăng nhập và quản lý phiên bằng cookie bảo mật.
-- Quản lý quần áo, danh mục, ảnh, mùa và loại trang phục.
-- Lưu outfit từ các món quần áo trong tủ.
-- Ghi nhật ký món đồ/outfit đã mặc và ghi chú theo ngày.
-- Lên lịch outfit theo ngày và dịp; xem kế hoạch theo tháng.
-- Xem Overview: số món chưa mặc, mức độ sử dụng, phân bố theo danh mục/mùa, lịch sắp tới và nhắc chăm sóc.
-- Nhận gợi ý phối theo mùa, loại, màu và tần suất mặc từ dữ liệu của chính mình.
+---
 
-“Thông minh” trong phiên bản này có nghĩa là số hóa, lọc, thống kê và gợi ý theo các quy tắc minh bạch. Hệ thống **không** sử dụng AI/ML, nhận diện hình ảnh hay dự báo thời tiết.
+## 1. Mục tiêu và Phạm vi
 
-## 2. Công nghệ
+Ứng dụng cung cấp giải pháp chuyển đổi số cho việc quản lý thời trang cá nhân:
 
-| Lớp | Công nghệ | Vai trò |
+- **Xác thực & Phiên làm việc**: Đăng ký, đăng nhập bảo mật với session lưu trong database và HTTP-only Cookie.
+- **Quản lý tủ đồ (Wardrobe)**: Thêm, sửa, xóa, tìm kiếm, lọc theo danh mục, mùa, kích cỡ, màu sắc và loại trang phục kèm ảnh thực tế.
+- **Phối đồ (Outfit Planner)**: Tạo bộ trang phục từ nhiều món đồ trong tủ, đặt tên và gắn nhãn mục đích mặc.
+- **Nhật ký mặc (Wear Logs)**: Ghi lại trang phục đã mặc theo từng ngày kèm ghi chú cá nhân.
+- **Lập kế hoạch (Outfit Planning)**: Lên lịch trang phục trước cho các dịp, sự kiện sắp tới; theo dõi trực quan theo lịch tháng.
+- **Tổng quan thông minh (Overview Dashboard)**: Thống kê số lượng đồ chưa mặc, mức độ sử dụng thường xuyên, phân bố theo mùa/danh mục và nhắc nhở chu kỳ giặt/chăm sóc quần áo.
+- **Gợi ý phối đồ**: Tự động gợi ý set đồ theo quy tắc minh bạch dựa trên thời tiết mùa, sự tương thích loại đồ và tần suất sử dụng (không phụ thuộc AI/ML bên ngoài).
+
+---
+
+## 2. Công nghệ sử dụng
+
+| Tầng | Công nghệ | Vai trò trong hệ thống |
 |---|---|---|
-| Frontend | React 19, TypeScript, Vite | SPA và giao diện responsive |
-| Điều hướng | React Router | Đường dẫn công khai và vùng cần đăng nhập |
-| Gọi API | **Axios**, `async/await` | REST client, cookie credentials, CSRF header, chuẩn hóa lỗi |
-| Server state | TanStack React Query, custom hook `useResource` | Cache, đồng bộ, loading/error/retry |
-| Backend | NestJS 12, TypeScript, Express adapter | REST API theo module, xác thực và xử lý nghiệp vụ |
-| Kiến trúc dữ liệu | TypeORM, MariaDB/MySQL driver | Repository/entity và giao dịch |
-| Lưu ảnh | Filesystem riêng theo user ở development; Cloudinary tùy cấu hình production | Lưu/đọc ảnh |
-| Proxy/triển khai | Vite proxy, Nginx, Docker Compose | Cùng nguồn `/api`, đóng gói dịch vụ |
-| Kiểm thử | Jest, Vitest, ESLint, Oxlint, GitHub Actions | Unit tests, lint, build và CI |
+| **Frontend** | React 19, TypeScript, Vite | Single Page Application (SPA), giao diện hiện đại, responsive |
+| **Routing** | React Router | Điều hướng trang công khai và bảo vệ các route cần đăng nhập |
+| **API Client** | Axios | Gọi REST API, tự động đính kèm Cookie, CSRF token header |
+| **Server State** | TanStack React Query, custom hook | Cache dữ liệu, đồng bộ hóa, tự động retry và quản lý loading state |
+| **UI Components** | React Bootstrap, Bootstrap 5, Lucide Icons | Hệ thống lưới giao diện và bộ icon trực quan |
+| **Backend API** | NestJS 12, TypeScript, Express adapter | Kiến trúc module, RESTful API, validation và xử lý nghiệp vụ |
+| **ORM & Database** | TypeORM, MariaDB / MySQL | Quản lý schema, quan hệ thực thể, migration và query builder |
+| **Lưu trữ ảnh** | Local Filesystem (Dev) / Cloudinary (Prod) | Quản lý upload và phân quyền xem ảnh theo chủ sở hữu |
+| **Bảo mật & Rate Limit** | Bcrypt, JWT, MariaDB shared rate-limiter | Băm mật khẩu, token phiên và chống tấn công brute-force |
 
-## 3. Kiến trúc MVC và Layered Architecture
+---
+
+## 3. Kiến trúc hệ thống
 
 ```text
-Trình duyệt
- React pages/components → custom hook (React Query) → Axios
-             ↓                    cookie + CSRF
-      Vite proxy / Nginx → NestJS Controller → Service → TypeORM → MariaDB
+Trình duyệt Web
+ └── React Components ──► custom hooks (React Query) ──► Axios Client
+                                                              │ (Cookie + CSRF Header)
+                                                              ▼
+                                                   Vite Proxy / Nginx
+                                                              ▼
+                                                   NestJS Controller
+                                                              ▼
+                                                        Service Layer
+                                                              ▼
+                                                    TypeORM Data Source
+                                                              ▼
+                                                    MariaDB Database
 ```
 
-Kiến trúc phân lớp tách giao diện, API, nghiệp vụ và truy cập dữ liệu. Theo MVC, React là **View**, entity/dữ liệu cùng quy tắc nghiệp vụ là **Model**, NestJS controller là **Controller**. Backend là REST API theo module, không phải MVC server-rendered.
+Hệ thống áp dụng kiến trúc phân lớp (Layered Architecture):
+- **Giao diện (View)**: Xây dựng bằng React SPA, xử lý trải nghiệm tương tác của người dùng.
+- **Bộ điều khiển (Controller)**: Định tuyến endpoint, kiểm tra quyền truy cập (Guards) và nhận request.
+- **Nghiệp vụ (Service)**: Xử lý quy tắc nghiệp vụ, tính toán gợi ý phối đồ, kiểm tra quyền sở hữu dữ liệu.
+- **Dữ liệu (Model / Repository)**: Thực thể TypeORM tương tác với cơ sở dữ liệu quan hệ MariaDB.
 
-## 4. Cơ sở dữ liệu và CRUD
+---
 
-### 4.1. Quan hệ đang triển khai
+## 4. Cơ sở dữ liệu và Mô hình quan hệ
 
-Database `digital_wardrobe` dùng MariaDB, gồm chín bảng:
-
-| Bảng | Vai trò |
-|---|---|
-| `users` | Tài khoản và vai trò |
-| `sessions` | Phiên có thể thu hồi, thời hạn đăng nhập |
-| `categories` | Danh mục dùng chung |
-| `clothing` | Quần áo theo chủ sở hữu, mùa, loại và thông tin chăm sóc |
-| `outfits` | Outfit thuộc một người dùng |
-| `outfit_items` | Quan hệ nhiều-nhiều giữa outfit và quần áo |
-| `wear_logs` | Nhật ký mặc theo ngày |
-| `wear_log_items` | Các món trong một lần ghi nhật ký |
-| `outfit_plans` | Lịch outfit theo ngày/dịp |
-
-Các khóa ngoại bảo vệ tính toàn vẹn; những quan hệ phụ thuộc sử dụng `ON DELETE CASCADE` hoặc `SET NULL` phù hợp. Schema mới ở [sql/digital_wardrobe.sql](./sql/digital_wardrobe.sql); migration cho database cũ ở [sql/migrations/](./sql/migrations).
+Cơ sở dữ liệu `digital_wardrobe` gồm các bảng chính:
+- `users`: Thông tin tài khoản, mật khẩu băm và vai trò (`user`, `admin`).
+- `sessions`: Phiên đăng nhập có khả năng thu hồi từ máy chủ.
+- `categories`: Danh mục phân loại dùng chung (Tops, Bottoms, Outerwear, Dresses, Shoes, Accessories).
+- `clothing`: Quần áo cá nhân, mùa, loại trang phục, màu sắc, ảnh và chu kỳ chăm sóc.
+- `outfits`: Bộ trang phục hoàn chỉnh được phối từ các món đồ.
+- `outfit_items`: Quan hệ nhiều-nhiều giữa outfit và từng món quần áo.
+- `wear_logs` & `wear_log_items`: Nhật ký mặc trang phục thực tế theo ngày.
+- `outfit_plans`: Lịch dự định mặc theo ngày và dịp cụ thể.
+- `rate_limit_hits` & `rate_limit_counters`: Quản lý giới hạn request lưu trong database.
 
 ```mermaid
 erDiagram
@@ -77,204 +104,173 @@ erDiagram
     OUTFITS ||--o{ OUTFIT_PLANS : planned
 ```
 
-### 4.2. Lựa chọn mô hình dữ liệu
+---
 
-MariaDB quan hệ là database duy nhất đang chạy, phù hợp với dữ liệu có quan hệ rõ và cần khóa ngoại/giao dịch. Hệ thống hiện đang tập trung vào mô hình quan hệ để đảm bảo tính nhất quán, truy vấn dữ liệu rõ ràng và dễ vận hành trong môi trường sản phẩm.
+## 5. Danh sách API chính
 
-### Vai trò người dùng
+Các endpoint yêu cầu xác thực phiên qua Cookie `HttpOnly`. Tiền tố `/api` được cấu hình qua proxy của Frontend:
 
-| Vai trò | Quyền |
-|---|---|
-| Khách | Xem nội dung công khai; đăng ký và đăng nhập |
-| `user` | Quản lý quần áo, outfit, lịch sử mặc, kế hoạch và chăm sóc thuộc tài khoản |
-| `admin` | Có quyền người dùng và quản lý danh mục dùng chung |
-
-Tài khoản đăng ký mới mặc định là `user`. Admin có thể phân trang danh sách tài khoản, đổi vai trò và xóa tài khoản tại `/app/admin/users`. Không thể tự xóa tài khoản đang đăng nhập hoặc xóa/hạ vai trò admin cuối cùng.
-
-Để cấp quyền cho tài khoản quản trị đầu tiên, đăng ký tài khoản trước rồi chạy bằng quyền database:
-
-```sql
-UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
-```
-
-### 4.3. CRUD
-
-Quần áo, outfit, thành phần outfit, danh mục, nhật ký mặc và kế hoạch đều hỗ trợ CRUD. Hồ sơ hỗ trợ cập nhật tên/email; đổi mật khẩu yêu cầu mật khẩu hiện tại và thu hồi toàn bộ phiên. Thông tin chăm sóc được quản lý cùng món đồ.
-
-## 5. API chính
-
-Các endpoint dữ liệu yêu cầu cookie đăng nhập. Prefix `/api` là cấu hình proxy của frontend; NestJS nhận đường dẫn không có prefix đó.
-
-| Nhóm | Method và route | Mục đích |
+| Nhóm | Phương thức & Route | Chức năng |
 |---|---|---|
-| Auth | `POST /auth/register`, `POST /auth/login` | Tạo tài khoản/phiên, đăng nhập |
-| Auth | `GET /auth/session`, `POST /auth/logout`, `POST /auth/change-password` | Kiểm tra/thu hồi phiên, đổi mật khẩu |
-| Auth | `POST /auth/forgot-password`, `POST /auth/reset-password` | Gửi và sử dụng token đặt lại mật khẩu |
-| Profile | `GET/PATCH /user/me` | Hồ sơ người hiện tại |
-| Admin tài khoản | `GET /user/admin`, `PATCH /user/admin/:id/role`, `DELETE /user/admin/:id` | Quản lý tài khoản có phân trang; chỉ admin |
-| Quần áo | `GET/POST /clothing`, `GET/PATCH/DELETE /clothing/:id` | CRUD và lọc/phân trang |
-| Ảnh | `POST /clothing/images` | Upload JPEG/PNG/WebP, tối đa 5 MB |
-| Danh mục | `GET /category`, `GET /category/page`, `GET /category/:id` | Đọc danh mục, có phân trang |
-| Danh mục admin | `POST/PATCH/DELETE /category[/:id]` | Thay đổi danh mục |
-| Outfit | `GET /outfit/page`, `GET/POST /outfit`, `GET/PATCH/DELETE /outfit/:id` | CRUD outfit và phân trang |
-| Thành phần outfit | `GET/POST /outfit-item`, `GET/PATCH/DELETE /outfit-item/:id` | Ghép món vào outfit |
-| Dashboard/gợi ý | `GET /activity/dashboard`, `GET /activity/recommendations` | Thống kê và gợi ý cá nhân |
-| Nhật ký mặc | `GET/POST /activity/logs`, `PATCH/DELETE /activity/logs/:id` | CRUD lịch sử mặc |
-| Lịch outfit | `GET/POST /activity/plans`, `PATCH/DELETE /activity/plans/:id` | CRUD kế hoạch; GET lọc theo khoảng ngày tối đa 366 ngày |
-| Chăm sóc | `PATCH /activity/clothing/:id/care` | Cập nhật ngày giặt/ngưỡng nhắc/hướng dẫn |
+| **Auth** | `POST /auth/register` | Đăng ký tài khoản mới |
+| **Auth** | `POST /auth/login` | Đăng nhập và khởi tạo phiên |
+| **Auth** | `GET /auth/session` | Kiểm tra trạng thái phiên làm việc hiện tại |
+| **Auth** | `POST /auth/logout` | Đăng xuất và thu hồi phiên trên máy chủ |
+| **Auth** | `POST /auth/change-password` | Đổi mật khẩu (yêu cầu mật khẩu cũ) |
+| **Profile** | `GET/PATCH /user/me` | Xem và cập nhật thông tin cá nhân |
+| **Quần áo** | `GET /clothing` | Danh sách quần áo (hỗ trợ tìm kiếm, lọc, phân trang) |
+| **Quần áo** | `POST /clothing` | Thêm món đồ mới |
+| **Quần áo** | `GET/PATCH/DELETE /clothing/:id` | Xem chi tiết, cập nhật hoặc xóa món đồ |
+| **Hình ảnh** | `POST /clothing/images` | Upload ảnh quần áo (hỗ trợ JPEG/PNG/WebP tối đa 5MB) |
+| **Danh mục** | `GET /category` | Lấy danh sách danh mục phân loại |
+| **Trang phục** | `GET/POST /outfit` | Xem danh sách và tạo bộ outfit mới |
+| **Trang phục** | `GET/PATCH/DELETE /outfit/:id` | Xem chi tiết, chỉnh sửa hoặc xóa bộ outfit |
+| **Hoạt động** | `GET /activity/dashboard` | Thống kê số lượng, tỷ lệ sử dụng, lời nhắc chăm sóc |
+| **Hoạt động** | `GET /activity/recommendations` | Nhận gợi ý phối đồ tự động theo luật |
+| **Nhật ký** | `GET/POST /activity/logs` | Xem và ghi nhật ký mặc đồ theo ngày |
+| **Kế hoạch** | `GET/POST /activity/plans` | Xem lịch và lên kế hoạch trang phục tương lai |
 
-`GET /clothing` hỗ trợ phân trang, tìm kiếm tên/màu/size trên toàn bộ dữ liệu, sắp xếp theo tên/màu, danh mục, mùa và loại (`top`, `bottom`, `outerwear`, `dress`, `shoes`, `accessory`).
+---
 
-## 6. Bảo mật
+## 6. Cơ chế Bảo mật
 
-- Mật khẩu được băm bằng bcrypt; không lưu hoặc ghi log mật khẩu dạng rõ.
-- Đổi mật khẩu yêu cầu xác minh mật khẩu hiện tại, băm mật khẩu mới và thu hồi mọi phiên đang hoạt động.
-- Quên mật khẩu dùng token ngẫu nhiên một lần, chỉ lưu SHA-256, hết hạn sau 30 phút và thu hồi mọi phiên sau khi reset. SMTP chưa cấu hình thì hệ thống ghi lỗi gửi mail phía server nhưng vẫn trả thông báo trung tính để không làm lộ email có tài khoản hay không.
-- JWT phiên được đặt trong cookie `HttpOnly`, `SameSite=Lax`, `Secure` ở production; thời hạn 15 phút.
-- JWT chứa session ID; server kiểm tra session còn hiệu lực trong database cho request được bảo vệ. Logout thu hồi session ở server.
-- Đăng nhập và đăng ký giới hạn 5 lần/phút cho mỗi IP; yêu cầu reset mật khẩu giới hạn riêng. Bộ đếm được lưu trong MariaDB để chia sẻ giữa các API replicas; schema mới tạo sẵn bảng, database cũ cần migration `20261014_add_shared_rate_limits.sql`.
-- Khi đặt API sau reverse proxy, cấu hình `TRUST_PROXY_HOPS` bằng đúng số proxy tin cậy tính từ API; không tin giá trị `X-Forwarded-For` từ client trực tiếp.
-- Cookie flags, HTTPS và khả năng thu hồi phiên giảm rủi ro chiếm dụng/tái sử dụng phiên; `HttpOnly` không bảo vệ thiết bị hoặc trình duyệt đã bị xâm nhập.
-- CSRF guard yêu cầu `X-Wardrobe-Request: 1` với request thay đổi dữ liệu.
-- Vai trò `admin` giới hạn quyền sửa danh mục.
-- Service lấy `user_id` từ danh tính đã xác thực, không tin ID chủ sở hữu do client truyền. Outfit và quần áo phải cùng chủ sở hữu khi tạo liên kết.
-- Ảnh development lưu local theo user. Ảnh upload lên Cloudinary dùng delivery `authenticated`, chỉ được đọc qua API có session và kiểm tra chủ sở hữu; ảnh được xóa khi thay ảnh hoặc xóa món đồ. URL ảnh do người dùng nhập thủ công vẫn do host bên ngoài kiểm soát; ảnh Cloudinary đã upload trước khi chuyển sang chế độ private cần được xử lý riêng.
-- Thông báo lỗi máy chủ không trả stack trace/database detail cho trình duyệt.
+- **Mật khẩu an toàn**: Toàn bộ mật khẩu được băm bằng thuật toán `bcrypt` kèm salt ngẫu nhiên; không lưu mật khẩu dạng văn bản rõ.
+- **Xác thực phiên (Session-based JWT)**: Token JWT được lưu trong Cookie bảo mật (`HttpOnly`, `SameSite=Lax`, `Secure` trên production). Server đối chiếu session trong DB mỗi request, cho phép thu hồi phiên tức thời khi đăng xuất hoặc đổi mật khẩu.
+- **Phòng chống CSRF**: Bảo vệ các request thay đổi dữ liệu (POST/PATCH/DELETE) thông qua header tùy biến `X-Wardrobe-Request: 1`.
+- **Phân quyền chặt chẽ (Ownership Verification)**: API luôn kiểm tra `user_id` từ phiên đăng nhập, ngăn chặn việc truy cập hoặc thao tác trên đồ của người dùng khác.
+- **Rate Limiting**: Giới hạn số lần đăng nhập, đăng ký và gửi yêu cầu để chống brute-force và lạm dụng API.
 
-Đây là biện pháp hiện có, không phải chứng nhận bảo mật. Trước production cần cấu hình SMTP, HTTPS, quản lý admin an toàn, backup/restore đã thử nghiệm và rà soát ảnh Cloudinary cũ.
+---
 
-## 7. Luật – Đạo đức – Nghề nghiệp
+## 7. Hướng dẫn cài đặt và khởi chạy
 
-Thiết kế và vận hành cần bảo vệ dữ liệu cá nhân (thu thập tối thiểu, giới hạn truy cập, không đưa mật khẩu/JWT/cookie vào log hoặc ảnh), tôn trọng bản quyền ảnh và thư viện, ghi nhận đóng góp trung thực, mô tả đúng giới hạn sản phẩm và xử lý sự cố có trách nhiệm. Trước khi nộp/triển khai, đối chiếu quy định hiện hành của Việt Nam và quy chế học thuật từ nguồn chính thức. Nội dung này là tổng quan học thuật, không phải tư vấn pháp lý.
+### Yêu cầu môi trường
+- **Node.js**: `>= 24.9.0` (khuyên dùng Node.js 24 LTS)
+- **Trình quản lý gói**: `npm`
+- **Cơ sở dữ liệu**: MariaDB hoặc MySQL
+- **Git**
 
-## 8. Chạy ứng dụng
+---
 
-### Yêu cầu
+### Khởi chạy nhanh (Local Development)
 
-- Node.js `>=24.9.0`
-- npm
-- MariaDB
-- Git (để clone dự án)
-
-### Chạy local
-
+#### 1. Clone repository và cài đặt thư viện
 ```bash
 git clone https://github.com/Whales88888/Digital-Wardrobe-Group.git
 cd Digital-Wardrobe-Group
+
+# Cài đặt dependencies cho cả frontend và backend
 npm --prefix frontend install
 npm --prefix backend install
-sudo service mariadb start
-mariadb -u root -p < sql/digital_wardrobe.sql
-cp -n backend/.env.example backend/.env
 ```
 
-Điền cấu hình MariaDB và `JWT_SECRET` dài tối thiểu 32 ký tự trong `backend/.env`. Không commit `.env`. Trong terminal riêng:
+#### 2. Khởi động Cơ sở dữ liệu và nạp dữ liệu mẫu
+- **Trên macOS (dùng Homebrew)**:
+  ```bash
+  brew services start mariadb
+  mariadb -u root -e "CREATE DATABASE IF NOT EXISTS digital_wardrobe;"
+  mariadb -u root digital_wardrobe < sql/digital_wardrobe.sql
+  ```
+- **Trên Linux / Ubuntu**:
+  ```bash
+  sudo service mariadb start
+  mariadb -u root -p -e "CREATE DATABASE IF NOT EXISTS digital_wardrobe;"
+  mariadb -u root -p digital_wardrobe < sql/digital_wardrobe.sql
+  ```
 
+#### 3. Cấu hình biến môi trường
+Tạo file cấu hình cho backend:
 ```bash
-npm --prefix backend run start:dev
-npm --prefix frontend run dev
+cp backend/.env.example backend/.env
+```
+Mở file `backend/.env` và cập nhật thông số kết nối cơ sở dữ liệu:
+```env
+DB_HOST=127.0.0.1
+DB_PORT=3307                  # Cổng MariaDB của bạn (mặc định 3306 hoặc 3307)
+DB_USER=root                  # Tên người dùng database
+DB_PASSWORD=                  # Mật khẩu database
+DB_NAME=digital_wardrobe
+PORT=3000
+TRUST_PROXY_HOPS=0
+JWT_SECRET=super_secret_jwt_key_at_least_32_characters_long_12345
+IMAGE_STORAGE_DIR=uploads
+FRONTEND_URL=http://localhost:5173
 ```
 
-Mở URL Vite (thường `http://localhost:5173`). Vite proxy `/api` tới NestJS tại port `3000`. Có thể dùng task VS Code **Run Digital Wardrobe** nếu môi trường đã cấu hình task.
+#### 4. Khởi chạy ứng dụng
+Mở 2 cửa sổ terminal tại thư mục gốc dự án:
 
-Ảnh development được lưu riêng theo user. Để upload ảnh ở production, cấu hình đủ `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` và `CLOUDINARY_API_SECRET`.
-Để gửi email đặt lại mật khẩu, cấu hình `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM` và tùy chọn `SMTP_USER`/`SMTP_PASSWORD`; `FRONTEND_URL` phải trỏ tới host giao diện. Nếu chưa cấu hình SMTP, endpoint reset vẫn không tiết lộ trạng thái tài khoản nhưng email sẽ không được gửi.
+- **Terminal 1: Khởi động Backend API**:
+  ```bash
+  npm run dev:backend
+  ```
+  *(Backend sẽ chạy tại: `http://localhost:3000`)*
 
-### Docker Compose
+- **Terminal 2: Khởi động Frontend Web**:
+  ```bash
+  npm run dev
+  ```
+  *(Frontend sẽ chạy tại: `http://localhost:5173`)*
 
-Chuẩn bị `.env` gốc và `backend/.env` từ các file mẫu, điền các mật khẩu/secret thật rồi chạy. Mẫu `.env` gốc chọn `NODE_ENV=production`, HTTPS phải được kết thúc tại reverse proxy/load balancer tin cậy trước `web`; không mở API hoặc MariaDB trực tiếp ra Internet. Nếu truy cập qua số proxy khác, đặt `TRUST_PROXY_HOPS` thành số hop thực tế. Chỉ dùng `NODE_ENV=development` cho máy local; chế độ production yêu cầu Cloudinary để upload ảnh.
+Truy cập trình duyệt tại: **`http://localhost:5173/`**
 
-```bash
-docker compose up --build -d
-```
+---
 
-Ứng dụng phục vụ tại `http://localhost:8080` sau khi khởi động; MariaDB lưu trong volume. Khi có TLS proxy, chỉ cho phép truy cập qua hostname HTTPS để cookie `Secure` hoạt động.
+### Bảng tóm tắt các lệnh hữu ích
 
-Với database cũ, sao lưu trước rồi áp dụng các migration trong [sql/migrations/](./sql/migrations/) theo thứ tự; không chạy lại migration đã áp dụng. Thử migration và khôi phục trên bản sao staging trước khi nâng cấp production.
+| Lệnh | Mô tả |
+|---|---|
+| `npm run dev` | Chạy máy chủ phát triển Frontend (Vite) |
+| `npm run dev:backend` | Chạy máy chủ phát triển Backend (NestJS watch mode) |
+| `npm run build` | Biên dịch toàn bộ Frontend và Backend |
+| `npm run lint` | Quét kiểm tra chất lượng code (ESLint & Oxlint) |
+| `npm test` | Chạy toàn bộ Unit Tests của hệ thống |
 
-### Production: email, backup và khôi phục
+---
 
-- Cấu hình SMTP bằng secret manager hoặc môi trường triển khai; không commit credentials. Trước khi mở dịch vụ, gửi thử email reset từ staging và xác minh link trỏ đúng `FRONTEND_URL`.
-- Đặt `JWT_SECRET` ngẫu nhiên, tối thiểu 32 ký tự; giới hạn quyền database cho user ứng dụng, bảo vệ admin đầu tiên và bật HTTPS ở ingress.
-- Backup MariaDB thường xuyên, mã hóa và lưu ngoài máy chủ; đặt retention phù hợp. Ví dụ khi các biến DB được export trong shell, lệnh sau hỏi mật khẩu DB và ghi file vào thư mục bị Git bỏ qua:
+## 8. Kiểm thử và Kiểm tra chất lượng
 
-```bash
-mkdir -p backups
-set -o pipefail
-mariadb-dump --single-transaction --routines --triggers \
-  --host "$DB_HOST" --user "$DB_USER" -p "$DB_NAME" \
-  | gzip > "backups/digital_wardrobe_$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
-```
-
-Khôi phục chỉ trên database đích đã xác minh (không dùng lệnh này trực tiếp trên production đang hoạt động); trước hết dựng database trống ở staging:
-
-```bash
-gzip -dc backups/digital_wardrobe_<timestamp>.sql.gz \
-  | mariadb --host "$DB_HOST" --user "$DB_USER" -p "$DB_NAME"
-```
-
-Định kỳ diễn tập khôi phục, kiểm tra đăng nhập/dữ liệu/ảnh sau restore và ghi nhận thời gian khôi phục. Database backup không chứa Cloudinary media; cấu hình backup/retention riêng cho Cloudinary và xác nhận ảnh có thể đọc lại.
-
-### Rà soát Cloudinary khi nâng cấp
-
-Trước khi xóa hoặc chuyển ảnh từng được public: backup database, xuất danh sách asset Cloudinary và so sánh với `clothing.image_url`. Chuyển asset còn dùng sang delivery `authenticated`, cập nhật `image_url` để đi qua endpoint owner-checked của API, rồi kiểm tra đọc bằng tài khoản sở hữu và từ chối truy cập tài khoản khác. Chỉ xóa asset orphan sau khi xác nhận không còn bản ghi tham chiếu và backup có thể khôi phục. Việc xóa tài khoản hiện cascade dữ liệu MariaDB nhưng không tự dọn toàn bộ Cloudinary assets; cần xử lý asset của các tài khoản đã xóa qua quy trình quản trị Cloudinary.
-
-## 9. Kiểm thử và kiểm tra
+Hệ thống được kiểm thử tự động với nhiều cấp độ:
 
 ```bash
+# Kiểm tra định dạng và quy chuẩn code
 npm run lint
+
+# Chạy Unit Tests
 npm test
+
+# Chạy kiểm thử End-to-End (E2E)
 npm run test:e2e
 npm run test:e2e:db
 npm run test:browser
-npm run build
 ```
 
-`test:e2e` chạy HTTP integration tests với repository giả lập. Kiểm thử MariaDB và browser chỉ kết nối tới database có tên cố định `digital_wardrobe_e2e`; mã kiểm thử từ chối tên khác để tránh chạy nhầm trên database ứng dụng. Tạo database và user chỉ dành cho test trên một MariaDB instance riêng (hoặc môi trường test dùng một lần), không cấp quyền trên database ứng dụng:
+- **Frontend Tests**: Kiểm tra Axios client, tự động đính kèm cookie, bảo mật CSRF và xử lý phản hồi lỗi an toàn.
+- **Backend Tests**: Kiểm tra Guards (Roles, CSRF), xác thực phiên, và xử lý dịch vụ theo module.
+- **Browser E2E**: Chạy kiểm thử tự động với Playwright mô phỏng luồng đăng nhập, tạo món đồ và phối trang phục.
 
-```sql
-CREATE DATABASE digital_wardrobe_e2e
-  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'wardrobe_e2e'@'127.0.0.1' IDENTIFIED BY '<strong-test-only-password>';
-GRANT ALL PRIVILEGES ON digital_wardrobe_e2e.* TO 'wardrobe_e2e'@'127.0.0.1';
-```
+---
 
-Sau đó đặt các biến môi trường:
+## 9. Giới hạn đã biết
 
-```bash
-export E2E_DB_HOST=127.0.0.1
-export E2E_DB_PORT=3306
-export E2E_DB_USER=wardrobe_e2e
-export E2E_DB_PASSWORD='<strong-test-only-password>'
-export E2E_DB_NAME=digital_wardrobe_e2e
+- **Thuật toán gợi ý**: Gợi ý trang phục hoạt động theo các tập luật heuristic dựa trên mùa, loại đồ và lịch sử mặc; hệ thống không sử dụng mô hình học máy (Machine Learning).
+- **Thông báo**: Tính năng nhắc nhở chu kỳ giặt và lịch trình hiện hiển thị trực tiếp trên Dashboard; chưa tích hợp Push Notification di động.
+- **Khôi phục mật khẩu**: Chức năng gửi email qua giao thức SMTP cần cấu hình thông tin máy chủ thư thực tế khi đưa lên môi trường Production.
 
-node backend/test/setup-database.cjs
-npm run test:e2e:db
-npm run test:browser
-```
+---
 
-Playwright tự khởi chạy API và frontend trên cổng riêng, không dùng lại server đang chạy và trỏ proxy tới API E2E. Cài Chromium trước bằng `./frontend/node_modules/.bin/playwright install --with-deps chromium`. Browser test tạo tài khoản/dữ liệu thử nghiệm trong database E2E; tuyệt đối không cấp cho user này quyền trên database có dữ liệu thật. CI tạo MariaDB dùng một lần, nạp schema, rồi chạy unit, HTTP, database và browser tests cùng lint/build.
+## 10. Tài liệu tham khảo
 
-Lần kiểm tra local: backend **19 suites / 62 tests**, frontend **1 file / 7 tests**, HTTP integration **4 tests**, MariaDB integration **1 test** và browser E2E **1 test** đều đạt; lint/build cũng thành công. Sau thay đổi rate-limit, backend unit suite, frontend lint/test/build và backend build/lint đã chạy lại; MariaDB/browser E2E chưa chạy lại trong lượt này.
+1. **React**: [https://react.dev/](https://react.dev/)
+2. **NestJS Framework**: [https://docs.nestjs.com/](https://docs.nestjs.com/)
+3. **TanStack React Query**: [https://tanstack.com/query/latest](https://tanstack.com/query/latest)
+4. **TypeORM**: [https://typeorm.io/](https://typeorm.io/)
+5. **MariaDB Knowledge Base**: [https://mariadb.com/kb/en/](https://mariadb.com/kb/en/)
+6. **OWASP Security Cheat Sheets**: [https://cheatsheetseries.owasp.org/](https://cheatsheetseries.owasp.org/)
 
-## 10. Giới hạn đã biết
+---
 
-- Gợi ý là heuristic, không dùng AI; lịch chưa gửi thông báo hoặc đồng bộ lịch ngoài.
-- Reset mật khẩu gửi email qua SMTP; triển khai thực tế cần cấu hình SMTP và bảo vệ credentials.
-- Nhắc lịch/chăm sóc hiện hiển thị trong dashboard; chưa có push/email notification hoặc đồng bộ calendar.
-- Rate limiter dùng bảng MariaDB chia sẻ giữa replicas; bảng đã thêm cho schema mới và có migration cho database cũ.
-- Xóa tài khoản cascade dữ liệu trong MariaDB nhưng chưa tự dọn Cloudinary assets của toàn bộ tài khoản; ảnh Cloudinary cũ cũng cần chuyển sang private delivery theo quy trình riêng.
-- NoSQL và Graph được phân tích trong báo cáo nhưng không triển khai; MariaDB là database duy nhất đang chạy.
-
-## 11. Tài liệu tham khảo
-
-1. React và NestJS: https://react.dev/ · https://docs.nestjs.com/
-2. Axios và TanStack Query: https://axios-http.com/docs/intro · https://tanstack.com/query/latest/docs/framework/react/overview
-3. TypeORM và MariaDB: https://typeorm.io/ · https://mariadb.com/kb/en/documentation/
-4. OWASP Authentication, Session Management và CSRF Cheat Sheets: https://cheatsheetseries.owasp.org/
-5. IETF RFC 7519 — JSON Web Token: https://www.rfc-editor.org/rfc/rfc7519
-
-## 12. Ảnh minh chứng
+## 11. Ảnh minh chứng
 
 Ảnh minh chứng giao diện, API và cơ sở dữ liệu:
 
@@ -326,6 +322,8 @@ Lần kiểm tra local: backend **19 suites / 62 tests**, frontend **1 file / 7 
 <img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 3" src="https://github.com/user-attachments/assets/f27bb61f-07b5-4664-b9a8-7d708bdb5d4d" />
 <img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 4" src="https://github.com/user-attachments/assets/939a5f04-a686-499c-9fd3-80f0a82ea519" />
 
-## Mã nguồn
+---
 
-[Whales88888/Digital-Wardrobe-Group](https://github.com/Whales88888/Digital-Wardrobe-Group)
+## Mã nguồn & Tác quyền
+
+Repository chính thức: [Whales88888/Digital-Wardrobe-Group](https://github.com/Whales88888/Digital-Wardrobe-Group)
