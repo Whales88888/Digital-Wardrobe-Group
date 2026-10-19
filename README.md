@@ -26,8 +26,6 @@ Hệ thống áp dụng kiến trúc phân lớp (Layered Architecture):
 - **Nghiệp vụ (Service)**: Xử lý quy tắc nghiệp vụ, tính toán gợi ý phối đồ, kiểm tra quyền sở hữu dữ liệu.
 - **Dữ liệu (Model / Repository)**: Thực thể TypeORM tương tác với cơ sở dữ liệu quan hệ MariaDB.
 
----
-
 ## 2. Cơ sở dữ liệu và Mô hình quan hệ
 
 Cơ sở dữ liệu `digital_wardrobe` gồm các bảng chính:
@@ -41,27 +39,7 @@ Cơ sở dữ liệu `digital_wardrobe` gồm các bảng chính:
 - `outfit_plans`: Lịch dự định mặc theo ngày và dịp cụ thể.
 - `rate_limit_hits` & `rate_limit_counters`: Quản lý giới hạn request lưu trong database.
 
-```mermaid
-erDiagram
-    USERS ||--o{ SESSIONS : has
-    USERS ||--o{ CLOTHING : owns
-    USERS ||--o{ OUTFITS : owns
-    USERS ||--o{ WEAR_LOGS : records
-    USERS ||--o{ OUTFIT_PLANS : schedules
-    CATEGORIES ||--o{ CLOTHING : classifies
-    OUTFITS ||--o{ OUTFIT_ITEMS : contains
-    CLOTHING ||--o{ OUTFIT_ITEMS : included_in
-    WEAR_LOGS ||--o{ WEAR_LOG_ITEMS : contains
-    CLOTHING ||--o{ WEAR_LOG_ITEMS : worn
-    OUTFITS o|--o{ WEAR_LOGS : worn_as
-    OUTFITS ||--o{ OUTFIT_PLANS : planned
-```
-
----
-
 ## 3. Danh sách API chính
-
-Các API nghiệp vụ yêu cầu xác thực phiên qua Cookie `HttpOnly`, ngoại trừ đăng ký, đăng nhập, quên/đặt lại mật khẩu và `GET /health`. Khi gọi trực tiếp backend, đường dẫn không có tiền tố `/api`; frontend thêm `/api` và proxy tới backend:
 
 | Group | Method & Route | Mục đích / Chức năng |
 |---|---|---|
@@ -91,8 +69,6 @@ Import collection [Digital-Wardrobe.postman_collection.json](./backend/postman/D
 4. Chạy collection bằng **Run** theo thứ tự request. Collection tạo tài khoản thử nghiệm riêng, đăng nhập bằng cookie session, tạo và cập nhật quần áo/outfit/nhật ký/lịch kế hoạch, rồi xóa dữ liệu thử. Các ID được lưu tự động giữa các request.
 5. Xem tab **Test Results** trong Collection Runner. Mỗi request kiểm tra mã HTTP và một số thuộc tính quan trọng trong response.
 
-Collection gửi header `X-Wardrobe-Request: 1` cho request để thay đổi dữ liệu; backend từ chối `POST`, `PATCH`, `DELETE` nếu thiếu header này (HTTP `403`). Postman giữ cookie `dw_session` nhận được khi đăng ký/đăng nhập trong cookie jar; không cần gửi token thủ công. Các request cần đăng nhập sẽ trả `401` nếu cookie hết hạn (phiên mặc định 15 phút) hoặc cookie jar bị tắt.
-
 Luồng kiểm thử bao gồm:
 
 - Đăng ký, kiểm tra phiên hiện tại và đăng nhập.
@@ -100,10 +76,6 @@ Luồng kiểm thử bao gồm:
 - CRUD outfit và các món quần áo thuộc outfit.
 - Tạo/cập nhật/xóa nhật ký mặc đồ và kế hoạch outfit; dashboard và gợi ý phối đồ.
 - Dọn dữ liệu thử nghiệm và đăng xuất ở cuối collection.
-
-Các API quản trị như `POST/PATCH/DELETE /category` và `/user/admin` cần phiên có role `admin`; collection thông thường không thay đổi dữ liệu quản trị. Upload ảnh `POST /clothing/images` cần body kiểu `form-data`, key `image`, file ảnh JPEG/PNG/WebP không vượt quá 5 MB.
-
----
 
 ## 4. Cơ chế Bảo mật
 
@@ -113,17 +85,13 @@ Các API quản trị như `POST/PATCH/DELETE /category` và `/user/admin` cần
 - **Phân quyền chặt chẽ (Ownership Verification)**: API luôn kiểm tra `user_id` từ phiên đăng nhập, ngăn chặn việc truy cập hoặc thao tác trên đồ của người dùng khác.
 - **Rate Limiting**: Giới hạn số lần đăng nhập, đăng ký và gửi yêu cầu để chống brute-force và lạm dụng API.
 
----
-
 ## 5. Hướng dẫn cài đặt và khởi chạy
 
 ### Yêu cầu môi trường
-- **Node.js**: `>= 24.9.0` (khuyên dùng Node.js 24 LTS)
+- **Node.js**: `>= 24.9.0`
 - **Trình quản lý gói**: `npm`
 - **Cơ sở dữ liệu**: MariaDB hoặc MySQL
 - **Git**
-
----
 
 ### Khởi chạy nhanh (Local Development)
 
@@ -132,7 +100,6 @@ Các API quản trị như `POST/PATCH/DELETE /category` và `/user/admin` cần
 git clone https://github.com/Whales88888/Digital-Wardrobe-Group.git
 cd Digital-Wardrobe-Group
 
-# Cài dependencies theo lockfile
 npm --prefix frontend ci
 npm --prefix backend ci
 ```
@@ -190,8 +157,6 @@ Truy cập trình duyệt tại: **`http://localhost:5173/`**
 
 Chờ backend báo `Nest application successfully started` trước khi gọi API. Nếu frontend hiện lỗi `502` hoặc Vite ghi `ECONNREFUSED 127.0.0.1:3000`, backend chưa chạy hoặc cấu hình `API_PROXY_TARGET` đang trỏ sai địa chỉ.
 
----
-
 ### Bảng tóm tắt các lệnh hữu ích
 
 | Lệnh | Mô tả |
@@ -202,27 +167,15 @@ Chờ backend báo `Nest application successfully started` trước khi gọi AP
 | `npm run lint` | Quét kiểm tra chất lượng code (ESLint & Oxlint) |
 | `npm test` | Chạy toàn bộ Unit Tests của hệ thống |
 
----
-
 ## 6. Kiểm thử và Kiểm tra chất lượng
 
 Hệ thống được kiểm thử tự động với nhiều cấp độ:
 
 ```bash
-# Kiểm tra lint
 npm run lint
-
-# Build frontend và backend
 npm run build
-
-# Unit test frontend và backend
 npm test
-
-# Backend HTTP E2E (dùng guard/repository giả lập, không cần database)
 npm run test:e2e
-
-# E2E với MariaDB và E2E trên trình duyệt:
-# cần cấu hình database riêng digital_wardrobe_e2e; hướng dẫn bên dưới.
 npm run test:e2e:db
 npm run test:browser
 ```
@@ -272,8 +225,6 @@ npm --prefix frontend exec -- playwright install chromium
 ```
 
 Cấu hình test từ chối chạy nếu `E2E_DB_NAME` khác `digital_wardrobe_e2e` để tránh vô tình tác động database ứng dụng.
-
----
 
 ## 7. Ảnh minh chứng
 
@@ -374,7 +325,6 @@ Cấu hình test từ chối chạy nếu `E2E_DB_NAME` khác `digital_wardrobe_
 ## Kiểm thử lỗi có kiểm soát
 <img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 21 43" src="https://github.com/user-attachments/assets/83e46d15-c578-4abe-8c67-73924fa53893" />
 
----
 
 ## Mã nguồn 
 
