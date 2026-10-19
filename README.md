@@ -2,54 +2,7 @@
 
 Ứng dụng web toàn diện giúp người dùng số hóa tủ đồ cá nhân, quản lý quần áo, phối đồ (outfit), lên kế hoạch trang phục hàng ngày, ghi nhật ký mặc đồ và nhận gợi ý phối đồ thông minh dựa trên dữ liệu thực tế.
 
----
-
-## 📑 Mục Lục
-- [1. Mục tiêu và Phạm vi](#1-mục-tiêu-và-phạm-vi)
-- [2. Công nghệ sử dụng](#2-công-nghệ-sử-dụng)
-- [3. Kiến trúc hệ thống](#3-kiến-trúc-hệ-thống)
-- [4. Cơ sở dữ liệu và Mô hình quan hệ](#4-cơ-sở-dữ-liệu-và-mô-hình-quan-hệ)
-- [5. Danh sách API chính](#5-danh-sách-api-chính)
-- [6. Cơ chế Bảo mật](#6-cơ-chế-bảo-mật)
-- [7. Hướng dẫn cài đặt và khởi chạy](#7-hướng-dẫn-cài-đặt-và-khởi-chạy)
-- [8. Kiểm thử và Kiểm tra chất lượng](#8-kiểm-thử-và-kiểm-tra-chất-lượng)
-- [9. Giới hạn đã biết](#9-giới-hạn-đã-biết)
-- [10. Tài liệu tham khảo](#10-tài-liệu-tham-khảo)
-- [11. Ảnh minh chứng](#11-ảnh-minh-chứng)
-
----
-
-## 1. Mục tiêu và Phạm vi
-
-Ứng dụng cung cấp giải pháp chuyển đổi số cho việc quản lý thời trang cá nhân:
-
-- **Xác thực & Phiên làm việc**: Đăng ký, đăng nhập bảo mật với session lưu trong database và HTTP-only Cookie.
-- **Quản lý tủ đồ (Wardrobe)**: Thêm, sửa, xóa, tìm kiếm, lọc theo danh mục, mùa, kích cỡ, màu sắc và loại trang phục kèm ảnh thực tế.
-- **Phối đồ (Outfit Planner)**: Tạo bộ trang phục từ nhiều món đồ trong tủ, đặt tên và gắn nhãn mục đích mặc.
-- **Nhật ký mặc (Wear Logs)**: Ghi lại trang phục đã mặc theo từng ngày kèm ghi chú cá nhân.
-- **Lập kế hoạch (Outfit Planning)**: Lên lịch trang phục trước cho các dịp, sự kiện sắp tới; theo dõi trực quan theo lịch tháng.
-- **Tổng quan thông minh (Overview Dashboard)**: Thống kê số lượng đồ chưa mặc, mức độ sử dụng thường xuyên, phân bố theo mùa/danh mục và nhắc nhở chu kỳ giặt/chăm sóc quần áo.
-- **Gợi ý phối đồ**: Tự động gợi ý set đồ theo quy tắc minh bạch dựa trên thời tiết mùa, sự tương thích loại đồ và tần suất sử dụng (không phụ thuộc AI/ML bên ngoài).
-
----
-
-## 2. Công nghệ sử dụng
-
-| Tầng | Công nghệ | Vai trò trong hệ thống |
-|---|---|---|
-| **Frontend** | React 19, TypeScript, Vite | Single Page Application (SPA), giao diện hiện đại, responsive |
-| **Routing** | React Router | Điều hướng trang công khai và bảo vệ các route cần đăng nhập |
-| **API Client** | Axios | Gọi REST API, tự động đính kèm Cookie, CSRF token header |
-| **Server State** | TanStack React Query, custom hook | Cache dữ liệu, đồng bộ hóa, tự động retry và quản lý loading state |
-| **UI Components** | React Bootstrap, Bootstrap 5, Lucide Icons | Hệ thống lưới giao diện và bộ icon trực quan |
-| **Backend API** | NestJS 12, TypeScript, Express adapter | Kiến trúc module, RESTful API, validation và xử lý nghiệp vụ |
-| **ORM & Database** | TypeORM, MariaDB / MySQL | Quản lý schema, quan hệ thực thể, migration và query builder |
-| **Lưu trữ ảnh** | Local Filesystem (Dev) / Cloudinary (Prod) | Quản lý upload và phân quyền xem ảnh theo chủ sở hữu |
-| **Bảo mật & Rate Limit** | Bcrypt, JWT, MariaDB shared rate-limiter | Băm mật khẩu, token phiên và chống tấn công brute-force |
-
----
-
-## 3. Kiến trúc hệ thống
+## 1. Kiến trúc hệ thống
 
 ```text
 Trình duyệt Web
@@ -75,7 +28,7 @@ Hệ thống áp dụng kiến trúc phân lớp (Layered Architecture):
 
 ---
 
-## 4. Cơ sở dữ liệu và Mô hình quan hệ
+## 2. Cơ sở dữ liệu và Mô hình quan hệ
 
 Cơ sở dữ liệu `digital_wardrobe` gồm các bảng chính:
 - `users`: Thông tin tài khoản, mật khẩu băm và vai trò (`user`, `admin`).
@@ -106,7 +59,7 @@ erDiagram
 
 ---
 
-## 5. Danh sách API chính
+## 3. Danh sách API chính
 
 Các API nghiệp vụ yêu cầu xác thực phiên qua Cookie `HttpOnly`, ngoại trừ đăng ký, đăng nhập, quên/đặt lại mật khẩu và `GET /health`. Khi gọi trực tiếp backend, đường dẫn không có tiền tố `/api`; frontend thêm `/api` và proxy tới backend:
 
@@ -152,7 +105,7 @@ Các API quản trị như `POST/PATCH/DELETE /category` và `/user/admin` cần
 
 ---
 
-## 6. Cơ chế Bảo mật
+## 4. Cơ chế Bảo mật
 
 - **Mật khẩu an toàn**: Toàn bộ mật khẩu được băm bằng thuật toán `bcrypt` kèm salt ngẫu nhiên; không lưu mật khẩu dạng văn bản rõ.
 - **Xác thực phiên (Session-based JWT)**: Token JWT được lưu trong Cookie bảo mật (`HttpOnly`, `SameSite=Lax`, `Secure` trên production). Server đối chiếu session trong DB mỗi request, cho phép thu hồi phiên tức thời khi đăng xuất hoặc đổi mật khẩu.
@@ -162,7 +115,7 @@ Các API quản trị như `POST/PATCH/DELETE /category` và `/user/admin` cần
 
 ---
 
-## 7. Hướng dẫn cài đặt và khởi chạy
+## 5. Hướng dẫn cài đặt và khởi chạy
 
 ### Yêu cầu môi trường
 - **Node.js**: `>= 24.9.0` (khuyên dùng Node.js 24 LTS)
@@ -251,7 +204,7 @@ Chờ backend báo `Nest application successfully started` trước khi gọi AP
 
 ---
 
-## 8. Kiểm thử và Kiểm tra chất lượng
+## 6. Kiểm thử và Kiểm tra chất lượng
 
 Hệ thống được kiểm thử tự động với nhiều cấp độ:
 
@@ -322,79 +275,107 @@ Cấu hình test từ chối chạy nếu `E2E_DB_NAME` khác `digital_wardrobe_
 
 ---
 
-## 9. Giới hạn đã biết
-
-- **Thuật toán gợi ý**: Gợi ý trang phục hoạt động theo các tập luật heuristic dựa trên mùa, loại đồ và lịch sử mặc; hệ thống không sử dụng mô hình học máy (Machine Learning).
-- **Thông báo**: Tính năng nhắc nhở chu kỳ giặt và lịch trình hiện hiển thị trực tiếp trên Dashboard; chưa tích hợp Push Notification di động.
-- **Khôi phục mật khẩu**: Chức năng gửi email qua giao thức SMTP cần cấu hình thông tin máy chủ thư thực tế khi đưa lên môi trường Production.
-
----
-
-## 10. Tài liệu tham khảo
-
-1. **React**: [https://react.dev/](https://react.dev/)
-2. **NestJS Framework**: [https://docs.nestjs.com/](https://docs.nestjs.com/)
-3. **TanStack React Query**: [https://tanstack.com/query/latest](https://tanstack.com/query/latest)
-4. **TypeORM**: [https://typeorm.io/](https://typeorm.io/)
-5. **MariaDB Knowledge Base**: [https://mariadb.com/kb/en/](https://mariadb.com/kb/en/)
-6. **OWASP Security Cheat Sheets**: [https://cheatsheetseries.owasp.org/](https://cheatsheetseries.owasp.org/)
-
----
-
-## 11. Ảnh minh chứng
-
-Ảnh minh chứng giao diện, API và cơ sở dữ liệu:
-
-<img width="1440" height="900" alt="Ảnh đăng ký API" src="https://github.com/user-attachments/assets/6c74ae92-f4a4-4d98-a825-a999b1c24243" />
-<img width="1440" height="900" alt="Ảnh đăng nhập API" src="https://github.com/user-attachments/assets/df86791f-e3a4-4fc7-bf63-3d7ddda24cc2" />
-<img width="1440" height="900" alt="Ảnh API được bảo vệ" src="https://github.com/user-attachments/assets/b7dd6293-de08-43be-9f5c-e41870d430ed" />
-<img width="1440" height="900" alt="Ảnh dữ liệu MariaDB" src="https://github.com/user-attachments/assets/a8f65023-037c-4265-8d14-71b8f0a011c5" />
+## 7. Ảnh minh chứng
 
 ### Cơ sở dữ liệu
 
-<img width="1440" height="900" alt="Ảnh chụp cơ sở dữ liệu" src="https://github.com/user-attachments/assets/3b0c9ea6-acba-4614-8598-7b8eb090c580" />
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 13 27" src="https://github.com/user-attachments/assets/c95503d5-c325-4d0e-b5ad-86d207bdd683" />
 
-### Kết nối cơ sở dữ liệu
+### API 
+## Authentication
+# Đăng kí tài khoản thử nghiệm 
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 25 27" src="https://github.com/user-attachments/assets/37b0b59f-8750-4c57-a487-ccd04ccd05e8" />
 
-<img width="1440" height="900" alt="Ảnh chụp kết nối cơ sở dữ liệu" src="https://github.com/user-attachments/assets/5f98d494-3bb9-4851-9c38-e4e7b118abdd" />
+# Kiểm tra phiên hiện tại
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 25 34" src="https://github.com/user-attachments/assets/03351a13-b616-4f9b-ab00-831cd3d7ca77" />
 
-### Quản lý người dùng
+# Đăng nhâp
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 25 44" src="https://github.com/user-attachments/assets/60cac9fb-d2ac-42bb-a18e-21a32f3d520d" />
 
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý người dùng 1" src="https://github.com/user-attachments/assets/0bd90bd4-b520-420a-8e78-5da1d72a89c4" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý người dùng 2" src="https://github.com/user-attachments/assets/a5639efc-e5a2-462c-9faf-c21e0901db6a" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý người dùng 3" src="https://github.com/user-attachments/assets/3a84ac70-4365-44c2-a2ea-b7895b9e2110" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý người dùng 4" src="https://github.com/user-attachments/assets/d803af14-9f66-4433-a675-bc2c25b75fc1" />
+## Categories 
+# Lấy ID danh mục
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 25 44" src="https://github.com/user-attachments/assets/ccb18bb0-0e8d-4bff-9885-abd6a8a996b2" />
 
-### Quản lý danh mục
+## Clothing
+# Tạo quần áo
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 36 47" src="https://github.com/user-attachments/assets/b8a137df-c26a-48ee-973f-a2fc4e301e55" />
 
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý danh mục 1" src="https://github.com/user-attachments/assets/83bb3332-492c-40af-b44b-24e74286bc41" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý danh mục 2" src="https://github.com/user-attachments/assets/dace1472-6559-4ec4-a199-88e10df24e1e" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý danh mục 3" src="https://github.com/user-attachments/assets/b3233d84-10c2-4625-8df7-e1103b42f979" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý danh mục 4" src="https://github.com/user-attachments/assets/4b509a51-2812-4309-979a-c1014db24a2d" />
+# Lấy danh sách, tìm kiếm và phân trang
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 37 01" src="https://github.com/user-attachments/assets/eea878a0-3d84-4844-bc88-35c86b625a39" />
 
-### Quản lý quần áo
+# Xem chi tiết 
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 37 08" src="https://github.com/user-attachments/assets/68f42033-e096-43ae-8557-6818bbe9516e" />
 
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý quần áo 1" src="https://github.com/user-attachments/assets/f485028d-d32d-499f-9ba1-bf4aa2da01f1" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý quần áo 2" src="https://github.com/user-attachments/assets/76ce03e3-e08a-4cff-9deb-ac02bda33c68" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý quần áo 3" src="https://github.com/user-attachments/assets/a51c362b-c84d-416e-a371-60080f518ccc" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý quần áo 4" src="https://github.com/user-attachments/assets/4d678585-e96f-477a-b14f-980ad6850d72" />
+# Cập nhập quần áo
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 37 23" src="https://github.com/user-attachments/assets/45e4517c-e030-437f-8124-29ae9e0254a2" />
 
-### Quản lý trang phục
+# Cập nhập thông tin chăm sóc
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 37 23" src="https://github.com/user-attachments/assets/653d1c42-8ee7-4eb3-90a3-c35db5d0bc4f" />
 
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý trang phục 1" src="https://github.com/user-attachments/assets/0c57b179-ccc2-4e32-b0e5-abd4a66e852e" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý trang phục 2" src="https://github.com/user-attachments/assets/aa53fda8-3e20-40c5-a2a4-dff794dde0a1" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý trang phục 3" src="https://github.com/user-attachments/assets/c9ddd795-6fe2-41ef-ac2d-6302947ddd14" />
-<img width="1440" height="900" alt="Ảnh minh chứng quản lý trang phục 4" src="https://github.com/user-attachments/assets/b976c885-a082-4a73-b751-d5477d32eec1" />
+## Outfit
+# Tạo outfit
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 37 56" src="https://github.com/user-attachments/assets/f9e98091-df12-4d77-bd38-a9db77fcdbd9" />
 
-### Quản lý các món đồ trong trang phục
+# Xem danh sách outfit có phân trang
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 38 08" src="https://github.com/user-attachments/assets/ce245f86-1709-41b0-aed3-4bb7772ab686" />
 
-<img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 1" src="https://github.com/user-attachments/assets/cc707c97-28e8-45a9-bfc5-7788d6f2b918" />
-<img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 2" src="https://github.com/user-attachments/assets/a063e281-a2db-4ce8-bde4-8db302d8a2af" />
-<img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 3" src="https://github.com/user-attachments/assets/f27bb61f-07b5-4664-b9a8-7d708bdb5d4d" />
-<img width="1440" height="900" alt="Ảnh minh chứng các món đồ trong trang phục 4" src="https://github.com/user-attachments/assets/939a5f04-a686-499c-9fd3-80f0a82ea519" />
+# Xem outfit theo ID
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 38 19" src="https://github.com/user-attachments/assets/9ad1e0bd-cd0b-43ed-a9fa-abda7446ec3b" />
+
+# Cập nhập outfit
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 38 33" src="https://github.com/user-attachments/assets/fa723a79-ce66-4ae6-90d0-76077d88f200" />
+
+## Outfit items
+# Thêm món đồ vào outfit
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 22 38 41" src="https://github.com/user-attachments/assets/e8e9cb72-30ea-41cd-9303-05d6954ac5c6" />
+
+# Đọc danh sách và chi tiết món trong outfit
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 02 52" src="https://github.com/user-attachments/assets/e3b9fcc8-ed1f-402c-baeb-ea9b048aabed" />
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 03 33" src="https://github.com/user-attachments/assets/987a261d-bc9b-45dc-a039-f8d55267253a" />
+
+# Cập nhật món trong outfit
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 03 08" src="https://github.com/user-attachments/assets/92cb29c5-8768-4d12-b0d8-0deaf1c867e9" />
+
+## Activity
+# Dashboard và gợi ý phối đồ
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 05 07" src="https://github.com/user-attachments/assets/53c6250b-022d-41f0-a61e-28d0a9cdb480" />
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 05 21" src="https://github.com/user-attachments/assets/a78fc2b9-9c7a-4c56-a470-814c8c501ae8" />
+
+# Tạo nhật ký mặc đồ từ outfit
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 05 29" src="https://github.com/user-attachments/assets/3c9cf5c0-6965-4349-bcd3-2e71888c91e9" />
+
+# Đọc và cập nhật nhật ký
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 05 36" src="https://github.com/user-attachments/assets/c712c51d-5b04-46e3-94e1-adb39ed188b0" />
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 05 43" src="https://github.com/user-attachments/assets/226a284e-dc68-4ba7-b9da-1334638f50da" />
+# Đọc kế hoạch theo khoảng ngày
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 15 25" src="https://github.com/user-attachments/assets/914e87a1-5466-4e70-a16f-1db3602d784f" />
+
+# Tạo và cập nhật kế hoạch outfit
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 15 32" src="https://github.com/user-attachments/assets/9777ca10-d8b5-4bcc-bb45-658daa98d84b" />
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 15 39" src="https://github.com/user-attachments/assets/0dcee274-b0b9-441c-832b-bc66db3d39d8" />
+# Dọn dữ liệu sau khi thử
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 17 39" src="https://github.com/user-attachments/assets/6f46fbd6-f0bf-45fa-942b-934c7dd4aea5" />
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 17 46" src="https://github.com/user-attachments/assets/6f7da1a9-0c1d-41ca-980c-8d212b79b9ec" />
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 17 53" src="https://github.com/user-attachments/assets/005de6a5-22ae-4c20-b3cf-7348bf6fe3ee" />
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 18 00" src="https://github.com/user-attachments/assets/4c932abd-a10c-40ad-a29c-4d2e393e20ec" />
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 18 07" src="https://github.com/user-attachments/assets/aab49d4d-6914-494e-8f92-96fed50de2cb" />
+
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 18 13" src="https://github.com/user-attachments/assets/18d1c48e-25af-4ee8-8faf-9e733aae9df6" />
+
+## Kiểm thử lỗi có kiểm soát
+<img width="1440" height="900" alt="Ảnh màn hình 2026-10-19 lúc 23 21 43" src="https://github.com/user-attachments/assets/83e46d15-c578-4abe-8c67-73924fa53893" />
 
 ---
 
-## Mã nguồn & Tác quyền
+## Mã nguồn 
 
-Repository chính thức: [Whales88888/Digital-Wardrobe-Group](https://github.com/Whales88888/Digital-Wardrobe-Group)
+Repository chính thức: https://github.com/Whales88888/Digital-Wardrobe-Group
