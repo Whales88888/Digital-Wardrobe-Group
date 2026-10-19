@@ -108,7 +108,7 @@ erDiagram
 
 ## 5. Danh sách API chính
 
-Các endpoint yêu cầu xác thực phiên qua Cookie `HttpOnly`. Tiền tố `/api` được cấu hình qua proxy của Frontend:
+Các API nghiệp vụ yêu cầu xác thực phiên qua Cookie `HttpOnly`, ngoại trừ đăng ký, đăng nhập, quên/đặt lại mật khẩu và `GET /health`. Khi gọi trực tiếp backend, đường dẫn không có tiền tố `/api`; frontend thêm `/api` và proxy tới backend:
 
 | Group | Method & Route | Mục đích / Chức năng |
 |---|---|---|
@@ -127,6 +127,28 @@ Các endpoint yêu cầu xác thực phiên qua Cookie `HttpOnly`. Tiền tố `
 | **Wear Logs** | `GET/POST /activity/logs`, `PATCH/DELETE /activity/logs/:id` | CRUD lịch sử và nhật ký mặc đồ theo ngày |
 | **Outfit Plans** | `GET/POST /activity/plans`, `PATCH/DELETE /activity/plans/:id` | CRUD kế hoạch outfit theo ngày/dịp (lọc tối đa 366 ngày) |
 | **Clothing Care** | `PATCH /activity/clothing/:id/care` | Cập nhật ngày giặt, ngưỡng nhắc và hướng dẫn chăm sóc |
+
+### Kiểm thử API bằng Postman
+
+Import collection [Digital-Wardrobe.postman_collection.json](./backend/postman/Digital-Wardrobe.postman_collection.json) vào Postman (**Import → File**), sau đó:
+
+1. Khởi động MariaDB/MySQL và backend theo hướng dẫn cài đặt. Backend mặc định chạy ở `http://localhost:3000`.
+2. Mở collection **Digital Wardrobe API - CRUD and Business Operations**, sửa biến `baseUrl` nếu backend chạy ở địa chỉ/cổng khác. Khi gọi trực tiếp backend, URL **không** có tiền tố `/api`; tiền tố đó chỉ được dùng qua proxy frontend.
+3. Bảo đảm database đã nạp dữ liệu danh mục mẫu. Collection tự lấy `category_id` đầu tiên từ `GET /category`.
+4. Chạy collection bằng **Run** theo thứ tự request. Collection tạo tài khoản thử nghiệm riêng, đăng nhập bằng cookie session, tạo và cập nhật quần áo/outfit/nhật ký/lịch kế hoạch, rồi xóa dữ liệu thử. Các ID được lưu tự động giữa các request.
+5. Xem tab **Test Results** trong Collection Runner. Mỗi request kiểm tra mã HTTP và một số thuộc tính quan trọng trong response.
+
+Collection gửi header `X-Wardrobe-Request: 1` cho request để thay đổi dữ liệu; backend từ chối `POST`, `PATCH`, `DELETE` nếu thiếu header này (HTTP `403`). Postman giữ cookie `dw_session` nhận được khi đăng ký/đăng nhập trong cookie jar; không cần gửi token thủ công. Các request cần đăng nhập sẽ trả `401` nếu cookie hết hạn (phiên mặc định 15 phút) hoặc cookie jar bị tắt.
+
+Luồng kiểm thử bao gồm:
+
+- Đăng ký, kiểm tra phiên hiện tại và đăng nhập.
+- CRUD quần áo và cập nhật thiết lập chăm sóc.
+- CRUD outfit và các món quần áo thuộc outfit.
+- Tạo/cập nhật/xóa nhật ký mặc đồ và kế hoạch outfit; dashboard và gợi ý phối đồ.
+- Dọn dữ liệu thử nghiệm và đăng xuất ở cuối collection.
+
+Các API quản trị như `POST/PATCH/DELETE /category` và `/user/admin` cần phiên có role `admin`; collection thông thường không thay đổi dữ liệu quản trị. Upload ảnh `POST /clothing/images` cần body kiểu `form-data`, key `image`, file ảnh JPEG/PNG/WebP không vượt quá 5 MB.
 
 ---
 
@@ -157,9 +179,9 @@ Các endpoint yêu cầu xác thực phiên qua Cookie `HttpOnly`. Tiền tố `
 git clone https://github.com/Whales88888/Digital-Wardrobe-Group.git
 cd Digital-Wardrobe-Group
 
-# Cài đặt dependencies cho cả frontend và backend
-npm --prefix frontend install
-npm --prefix backend install
+# Cài dependencies theo lockfile
+npm --prefix frontend ci
+npm --prefix backend ci
 ```
 
 #### 2. Khởi động Cơ sở dữ liệu và nạp dữ liệu mẫu
@@ -184,16 +206,17 @@ cp backend/.env.example backend/.env
 Mở file `backend/.env` và cập nhật thông số kết nối cơ sở dữ liệu:
 ```env
 DB_HOST=127.0.0.1
-DB_PORT=3307                  # Cổng MariaDB của bạn (mặc định 3306 hoặc 3307)
-DB_USER=root                  # Tên người dùng database
-DB_PASSWORD=                  # Mật khẩu database
+DB_PORT=3306                  # Cổng MariaDB/MySQL local mặc định
+DB_USER=your_local_user
+DB_PASSWORD=your_local_password
 DB_NAME=digital_wardrobe
 PORT=3000
 TRUST_PROXY_HOPS=0
-JWT_SECRET=super_secret_jwt_key_at_least_32_characters_long_12345
+JWT_SECRET=replace_with_a_random_secret_at_least_32_characters
 IMAGE_STORAGE_DIR=uploads
 FRONTEND_URL=http://localhost:5173
 ```
+Không dùng nguyên các giá trị ví dụ cho môi trường production; đặt một `JWT_SECRET` ngẫu nhiên dài ít nhất 32 ký tự. Tạo user database riêng với quyền trên `digital_wardrobe` thay vì dùng tài khoản root.
 
 #### 4. Khởi chạy ứng dụng
 Mở 2 cửa sổ terminal tại thư mục gốc dự án:
@@ -211,6 +234,8 @@ Mở 2 cửa sổ terminal tại thư mục gốc dự án:
   *(Frontend sẽ chạy tại: `http://localhost:5173`)*
 
 Truy cập trình duyệt tại: **`http://localhost:5173/`**
+
+Chờ backend báo `Nest application successfully started` trước khi gọi API. Nếu frontend hiện lỗi `502` hoặc Vite ghi `ECONNREFUSED 127.0.0.1:3000`, backend chưa chạy hoặc cấu hình `API_PROXY_TARGET` đang trỏ sai địa chỉ.
 
 ---
 
@@ -231,21 +256,69 @@ Truy cập trình duyệt tại: **`http://localhost:5173/`**
 Hệ thống được kiểm thử tự động với nhiều cấp độ:
 
 ```bash
-# Kiểm tra định dạng và quy chuẩn code
+# Kiểm tra lint
 npm run lint
 
-# Chạy Unit Tests
+# Build frontend và backend
+npm run build
+
+# Unit test frontend và backend
 npm test
 
-# Chạy kiểm thử End-to-End (E2E)
+# Backend HTTP E2E (dùng guard/repository giả lập, không cần database)
 npm run test:e2e
+
+# E2E với MariaDB và E2E trên trình duyệt:
+# cần cấu hình database riêng digital_wardrobe_e2e; hướng dẫn bên dưới.
 npm run test:e2e:db
 npm run test:browser
 ```
 
-- **Frontend Tests**: Kiểm tra Axios client, tự động đính kèm cookie, bảo mật CSRF và xử lý phản hồi lỗi an toàn.
-- **Backend Tests**: Kiểm tra Guards (Roles, CSRF), xác thực phiên, và xử lý dịch vụ theo module.
-- **Browser E2E**: Chạy kiểm thử tự động với Playwright mô phỏng luồng đăng nhập, tạo món đồ và phối trang phục.
+- **Frontend unit tests**: Kiểm tra API client, xử lý lỗi và cấu hình làm mới dữ liệu khi focus tab/định kỳ.
+- **Backend unit tests**: Kiểm tra controller, service, guards (Roles, CSRF), xác thực và các trường hợp dữ liệu không hợp lệ.
+- **Backend HTTP E2E** (`npm run test:e2e`): Kiểm tra request/response HTTP, CSRF, xác thực và rate limit với repository giả lập; không thay thế test database.
+- **Database E2E** (`npm run test:e2e:db`): Kiểm tra đăng ký, phiên và CRUD với MariaDB thật.
+- **Browser E2E** (`npm run test:browser`): Dùng Playwright mô phỏng luồng người dùng trên giao diện, có chạy backend/frontend riêng.
+
+#### Chuẩn bị E2E dùng database và trình duyệt
+
+Hai nhóm `test:e2e:db` và `test:browser` chỉ kết nối database chuyên biệt tên `digital_wardrobe_e2e`. Không trỏ chúng vào database phát triển hoặc production. Tạo database rỗng bằng tài khoản quản trị MariaDB/MySQL:
+
+```bash
+mariadb -h 127.0.0.1 -P 3306 -u root -p \
+  -e "CREATE DATABASE digital_wardrobe_e2e CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+Trong cùng terminal, đặt thông tin kết nối bằng một tài khoản chỉ có quyền trên database E2E:
+
+```bash
+export E2E_DB_HOST=127.0.0.1
+export E2E_DB_PORT=3306
+export E2E_DB_USER=your_e2e_user
+export E2E_DB_PASSWORD=your_e2e_password
+export E2E_DB_NAME=digital_wardrobe_e2e
+```
+
+Khởi tạo schema và dữ liệu danh mục mẫu **một lần trên database E2E rỗng**:
+
+```bash
+node backend/test/setup-database.cjs
+```
+
+Sau đó có thể chạy:
+
+```bash
+npm run test:e2e:db
+npm run test:browser
+```
+
+Test database xóa user do nó tạo sau khi chạy; browser test dùng email riêng có timestamp. Nếu Playwright báo thiếu Chromium, cài browser một lần bằng:
+
+```bash
+npm --prefix frontend exec -- playwright install chromium
+```
+
+Cấu hình test từ chối chạy nếu `E2E_DB_NAME` khác `digital_wardrobe_e2e` để tránh vô tình tác động database ứng dụng.
 
 ---
 

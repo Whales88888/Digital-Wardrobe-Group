@@ -11,7 +11,12 @@ export function useResource<T>(
   queryKey: readonly unknown[],
   load: () => Promise<T>,
 ): ResourceState<T> {
-  const query = useQuery({ queryKey, queryFn: load })
+  const query = useQuery({
+    queryKey,
+    queryFn: load,
+    refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
+  })
   return {
     data: query.data ?? null,
     loading: query.isLoading,

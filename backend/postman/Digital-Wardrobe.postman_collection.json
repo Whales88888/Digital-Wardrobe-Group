@@ -1,0 +1,816 @@
+{
+  "info": {
+    "_postman_id": "c72b6701-92d5-4989-aa35-46472892a2fc",
+    "name": "Digital Wardrobe API - CRUD and Business Operations",
+    "description": "Run requests in order. The collection registers and logs in a fresh user, stores IDs from responses, tests CRUD flows, then removes the test data. Base URL is the backend origin (no /api prefix).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.request.headers.upsert({ key: 'X-Wardrobe-Request', value: '1' });"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "email",
+      "value": "postman@example.com"
+    },
+    {
+      "key": "password",
+      "value": "WardrobePostman2026!"
+    },
+    {
+      "key": "categoryId",
+      "value": "1"
+    },
+    {
+      "key": "clothingId",
+      "value": ""
+    },
+    {
+      "key": "outfitId",
+      "value": ""
+    },
+    {
+      "key": "outfitItemId",
+      "value": ""
+    },
+    {
+      "key": "wearLogId",
+      "value": ""
+    },
+    {
+      "key": "outfitPlanId",
+      "value": ""
+    },
+    {
+      "key": "wornOn",
+      "value": ""
+    },
+    {
+      "key": "plannedFor",
+      "value": ""
+    },
+    {
+      "key": "fromDate",
+      "value": ""
+    },
+    {
+      "key": "toDate",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register test user",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const now = Date.now();",
+                  "pm.collectionVariables.set('email', `postman+${now}@example.com`);",
+                  "const dateAt = (offset) => { const date = new Date(); date.setUTCDate(date.getUTCDate() + offset); return date.toISOString().slice(0, 10); };",
+                  "pm.collectionVariables.set('wornOn', dateAt(-1));",
+                  "pm.collectionVariables.set('plannedFor', dateAt(1));",
+                  "pm.collectionVariables.set('fromDate', dateAt(-180));",
+                  "pm.collectionVariables.set('toDate', dateAt(180));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Account created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('Response does not expose the password', function () { pm.expect(pm.response.json().user).not.to.have.property('password'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test User\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/register"
+          }
+        },
+        {
+          "name": "Get current session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Session is authenticated', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get('email')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/session"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeds', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get('email')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Categories",
+      "item": [
+        {
+          "name": "List categories and select a category for the test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Categories are available', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().length).to.be.above(0); });",
+                  "const categories = pm.response.json();",
+                  "if (categories.length) pm.collectionVariables.set('categoryId', String(categories[0].category_id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/category"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Clothing CRUD and care",
+      "item": [
+        {
+          "name": "Create clothing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Clothing created', function () { pm.response.to.have.status(201); pm.expect(pm.response.json().name).to.eql('Postman Test Shirt'); });",
+                  "pm.collectionVariables.set('clothingId', String(pm.response.json().clothing_id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": {{categoryId}},\n  \"name\": \"Postman Test Shirt\",\n  \"color\": \"Navy\",\n  \"size\": \"M\",\n  \"season\": \"all-season\",\n  \"clothing_type\": \"top\"\n}"
+            },
+            "url": "{{baseUrl}}/clothing"
+          }
+        },
+        {
+          "name": "List and filter clothing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Filtered clothing is returned', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().items.some((item) => String(item.clothing_id) === pm.collectionVariables.get('clothingId'))).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/clothing?page=1&page_size=24&search=Postman%20Test"
+          }
+        },
+        {
+          "name": "Get clothing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Clothing is found', function () { pm.response.to.have.status(200); pm.expect(String(pm.response.json().clothing_id)).to.eql(pm.collectionVariables.get('clothingId')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/clothing/{{clothingId}}"
+          }
+        },
+        {
+          "name": "Update clothing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Clothing updated', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().color).to.eql('Blue'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"color\": \"Blue\"\n}"
+            },
+            "url": "{{baseUrl}}/clothing/{{clothingId}}"
+          }
+        },
+        {
+          "name": "Update clothing care",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Care settings updated', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().wash_after_wears).to.eql(5); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wash_after_wears\": 5,\n  \"care_instructions\": \"Machine wash cold\"\n}"
+            },
+            "url": "{{baseUrl}}/activity/clothing/{{clothingId}}/care"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Outfit and outfit items CRUD",
+      "item": [
+        {
+          "name": "Create outfit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit created', function () { pm.response.to.have.status(201); pm.expect(pm.response.json().name).to.eql('Postman Test Outfit'); });",
+                  "pm.collectionVariables.set('outfitId', String(pm.response.json().outfit_id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Test Outfit\",\n  \"description\": \"Created by the Postman CRUD collection\"\n}"
+            },
+            "url": "{{baseUrl}}/outfit"
+          }
+        },
+        {
+          "name": "List outfit page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit page is returned', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().items.some((item) => String(item.outfit_id) === pm.collectionVariables.get('outfitId'))).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/outfit/page?page=1&page_size=12"
+          }
+        },
+        {
+          "name": "Get outfit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit is found', function () { pm.response.to.have.status(200); pm.expect(String(pm.response.json().outfit_id)).to.eql(pm.collectionVariables.get('outfitId')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/outfit/{{outfitId}}"
+          }
+        },
+        {
+          "name": "Update outfit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit updated', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().description).to.eql('Updated by Postman'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated by Postman\"\n}"
+            },
+            "url": "{{baseUrl}}/outfit/{{outfitId}}"
+          }
+        },
+        {
+          "name": "Add clothing to outfit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit item created', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('outfitItemId', String(pm.response.json().outfit_item_id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outfit_id\": {{outfitId}},\n  \"clothing_id\": {{clothingId}}\n}"
+            },
+            "url": "{{baseUrl}}/outfit-item"
+          }
+        },
+        {
+          "name": "List outfit items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit item appears in the list', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().some((item) => String(item.outfit_item_id) === pm.collectionVariables.get('outfitItemId'))).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/outfit-item"
+          }
+        },
+        {
+          "name": "Get outfit item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit item is found', function () { pm.response.to.have.status(200); pm.expect(String(pm.response.json().outfit_item_id)).to.eql(pm.collectionVariables.get('outfitItemId')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/outfit-item/{{outfitItemId}}"
+          }
+        },
+        {
+          "name": "Update outfit item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit item updated', function () { pm.response.to.have.status(200); pm.expect(String(pm.response.json().clothing_id)).to.eql(pm.collectionVariables.get('clothingId')); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clothing_id\": {{clothingId}}\n}"
+            },
+            "url": "{{baseUrl}}/outfit-item/{{outfitItemId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Activity operations",
+      "item": [
+        {
+          "name": "Dashboard",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Dashboard includes wardrobe statistics', function () { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.have.property('total_clothing'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/activity/dashboard"
+          }
+        },
+        {
+          "name": "Outfit recommendations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Recommendations response is returned', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().recommendations).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/activity/recommendations"
+          }
+        },
+        {
+          "name": "Create wear log from outfit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Wear log created', function () { pm.response.to.have.status(201); pm.expect(pm.response.json().outfit_id).to.eql(Number(pm.collectionVariables.get('outfitId'))); });",
+                  "pm.collectionVariables.set('wearLogId', String(pm.response.json().wear_log_id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"worn_on\": \"{{wornOn}}\",\n  \"outfit_id\": {{outfitId}},\n  \"note\": \"Created by Postman\"\n}"
+            },
+            "url": "{{baseUrl}}/activity/logs"
+          }
+        },
+        {
+          "name": "List wear logs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Wear log appears in history', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().some((log) => String(log.wear_log_id) === pm.collectionVariables.get('wearLogId'))).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/activity/logs"
+          }
+        },
+        {
+          "name": "Update wear log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Wear log updated', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().note).to.eql('Updated by Postman'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Updated by Postman\"\n}"
+            },
+            "url": "{{baseUrl}}/activity/logs/{{wearLogId}}"
+          }
+        },
+        {
+          "name": "List outfit plans in date range",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Plans are returned for the date range', function () { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.be.an('array'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/activity/plans?from={{fromDate}}&to={{toDate}}"
+          }
+        },
+        {
+          "name": "Create outfit plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit plan created', function () { pm.response.to.have.status(201); pm.expect(pm.response.json().planned_for).to.eql(pm.collectionVariables.get('plannedFor')); });",
+                  "pm.collectionVariables.set('outfitPlanId', String(pm.response.json().outfit_plan_id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outfit_id\": {{outfitId}},\n  \"planned_for\": \"{{plannedFor}}\",\n  \"occasion\": \"Test event\",\n  \"note\": \"Created by Postman\"\n}"
+            },
+            "url": "{{baseUrl}}/activity/plans"
+          }
+        },
+        {
+          "name": "Update outfit plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit plan updated', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().occasion).to.eql('Updated test event'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"occasion\": \"Updated test event\"\n}"
+            },
+            "url": "{{baseUrl}}/activity/plans/{{outfitPlanId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Cleanup test data",
+      "item": [
+        {
+          "name": "Delete wear log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Wear log deleted', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/activity/logs/{{wearLogId}}"
+          }
+        },
+        {
+          "name": "Delete outfit plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit plan deleted', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/activity/plans/{{outfitPlanId}}"
+          }
+        },
+        {
+          "name": "Delete outfit item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit item deleted', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/outfit-item/{{outfitItemId}}"
+          }
+        },
+        {
+          "name": "Delete outfit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Outfit deleted', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/outfit/{{outfitId}}"
+          }
+        },
+        {
+          "name": "Delete clothing",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Clothing deleted', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/clothing/{{clothingId}}"
+          }
+        },
+        {
+          "name": "Logout test user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Session revoked', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().success).to.eql(true); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        }
+      ]
+    }
+  ]
+}
