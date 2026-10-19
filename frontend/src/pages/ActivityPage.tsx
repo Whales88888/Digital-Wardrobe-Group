@@ -18,7 +18,7 @@ function formatDate(value: string): string {
   })
 }
 
-export default function ActivityPage() {
+export default function ActivityPage({ view }: { view: 'wear' | 'plan' }) {
   const clothing = useResource(['clothing', 'activity'], () => listAllClothing())
   const outfits = useResource(['outfits'], outfitsApi.list)
   const logs = useResource(['activity', 'logs'], activityApi.logs)
@@ -206,8 +206,10 @@ export default function ActivityPage() {
     <>
       <PageHeading
         eyebrow="Make it intentional"
-        title="Wear & plan"
-        description="Keep a wear history, plan outfits on your calendar and get seasonal combinations from your own wardrobe."
+        title={view === 'wear' ? 'Wear' : 'Plan'}
+        description={view === 'wear'
+          ? 'Record what you wear and review your wardrobe history.'
+          : 'Schedule saved outfits and manage your calendar.'}
       />
 
       {loading ? (
@@ -217,6 +219,7 @@ export default function ActivityPage() {
       ) : (
         <>
           <div className="activity-grid">
+            {view === 'wear' && (
             <section className="dashboard-section activity-panel">
               <div className="dashboard-section-heading"><h3>Log what you wore</h3></div>
               <p className="table-row-subtitle">Choose individual pieces, a saved outfit, or both. Logs power your wardrobe insights.</p>
@@ -252,6 +255,8 @@ export default function ActivityPage() {
               </form>
             </section>
 
+            )}
+            {view === 'plan' && (
             <section className="dashboard-section activity-panel">
               <div className="dashboard-section-heading"><h3>Plan an outfit</h3></div>
               <p className="table-row-subtitle">Schedule one of your saved outfits for an upcoming date or event.</p>
@@ -293,8 +298,10 @@ export default function ActivityPage() {
                 )}
               </form>
             </section>
+            )}
           </div>
 
+          {view === 'plan' && (
           <section className="dashboard-section">
             <div className="dashboard-section-heading">
               <h3><CalendarDays size={19} aria-hidden="true" /> Outfit calendar</h3>
@@ -347,7 +354,9 @@ export default function ActivityPage() {
               })}
             </div>
           </section>
+          )}
 
+          {view === 'wear' && (
           <section className="dashboard-section">
             <div className="dashboard-section-heading">
               <h3>Seasonal outfit ideas</h3>
@@ -377,7 +386,9 @@ export default function ActivityPage() {
               />
             )}
           </section>
+          )}
 
+          {view === 'wear' && (
           <section className="dashboard-section activity-history">
             <div className="dashboard-section-heading">
               <h3>Wear history</h3>
@@ -440,7 +451,9 @@ export default function ActivityPage() {
               <EmptyState title="No wear logs yet." detail="Record what you wore to start seeing useful wardrobe statistics." />
             )}
           </section>
+          )}
 
+          {view === 'plan' && (
           <section className="dashboard-section activity-history">
             <div className="dashboard-section-heading">
               <h3>Scheduled outfits</h3>
@@ -498,6 +511,7 @@ export default function ActivityPage() {
               <EmptyState title="Your calendar is clear." detail="Plan a saved outfit above to see it here." />
             )}
           </section>
+          )}
         </>
       )}
 

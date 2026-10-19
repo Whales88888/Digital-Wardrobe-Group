@@ -42,7 +42,7 @@ export default function DashboardPage() {
   }
 
   return <>
-    <PageHeading eyebrow="Your space" title="A clear view of your closet." description="See what you own, what you wear, what is coming up and what needs care." action={<Link className="button-primary button-small" to="/app/planner"><CalendarDays size={15} /> Open planner</Link>} />
+    <PageHeading eyebrow="Your space" title="A clear view of your closet." description="See what you own, what you wear, what is coming up and what needs care." action={<Link className="button-primary button-small" to="/app/planner/plan"><CalendarDays size={15} /> Open planner</Link>} />
     {feedback && <p className={`feedback ${feedback.error ? 'feedback-error' : ''}`} role={feedback.error ? 'alert' : 'status'}>{feedback.message}</p>}
     {loading ? <LoadingState label="Gathering your wardrobe overview" /> : error ? <ErrorState message={error.message} onRetry={() => sources.forEach((source) => source.retry())} /> : <>
       <div className="data-card-grid">
@@ -60,20 +60,20 @@ export default function DashboardPage() {
 
       <div className="dashboard-insight-grid">
         <section className="dashboard-section insight-card">
-          <div className="dashboard-section-heading"><h3>Wear insights</h3><Link className="text-link" to="/app/planner">View history <ArrowRight size={14} /></Link></div>
+          <div className="dashboard-section-heading"><h3>Wear insights</h3><Link className="text-link" to="/app/planner/wear">View history <ArrowRight size={14} /></Link></div>
           {insights?.most_worn ? <div className="wear-stat"><div><span className="eyebrow">Most worn</span><Link to={`/app/wardrobe/${insights.most_worn.clothing_id}`}>{insights.most_worn.name}</Link></div><strong>{insights.most_worn.wear_count}×</strong></div> : <p className="table-row-subtitle">Log what you wear to see your most-used pieces.</p>}
           {insights?.least_worn && <div className="wear-stat"><div><span className="eyebrow">Least worn (among logged pieces)</span><Link to={`/app/wardrobe/${insights.least_worn.clothing_id}`}>{insights.least_worn.name}</Link></div><strong>{insights.least_worn.wear_count}×</strong></div>}
           <p className="table-row-subtitle">{insights?.unworn_count ?? 0} items have no wear history yet.</p>
         </section>
         <section className="dashboard-section insight-card">
-          <div className="dashboard-section-heading"><h3>Upcoming outfits</h3><Link className="text-link" to="/app/planner">Calendar <ArrowRight size={14} /></Link></div>
+          <div className="dashboard-section-heading"><h3>Upcoming outfits</h3><Link className="text-link" to="/app/planner/plan">Calendar <ArrowRight size={14} /></Link></div>
           {insights?.upcoming_plans.length ? <div className="compact-list">{insights.upcoming_plans.map((plan) => <div className="compact-row" key={plan.outfit_plan_id}><span>{formatDate(plan.planned_for)}</span><strong>{plan.outfit_name}</strong>{plan.occasion && <small>{plan.occasion}</small>}</div>)}</div> : <p className="table-row-subtitle">Nothing planned yet. Schedule a saved outfit on your calendar.</p>}
         </section>
       </div>
 
       <div className="dashboard-insight-grid">
         <section className="dashboard-section insight-card">
-          <div className="dashboard-section-heading"><h3>Recently worn</h3><Link className="text-link" to="/app/planner">Log an outfit <ArrowRight size={14} /></Link></div>
+          <div className="dashboard-section-heading"><h3>Recently worn</h3><Link className="text-link" to="/app/planner/wear">Log an outfit <ArrowRight size={14} /></Link></div>
           {insights?.recent_logs.length ? <div className="compact-list">{insights.recent_logs.map((log) => <div className="compact-row" key={log.wear_log_id}><span>{formatDate(log.worn_on)}</span><strong>{[log.outfit_name, log.clothing_names].filter(Boolean).join(' · ') || 'Wardrobe item'}</strong>{log.note && <small>{log.note}</small>}</div>)}</div> : <p className="table-row-subtitle">Your wear history will appear here when you start logging outfits.</p>}
         </section>
         <section className="dashboard-section insight-card">

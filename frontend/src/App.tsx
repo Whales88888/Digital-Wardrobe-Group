@@ -49,7 +49,9 @@ function App() {
                   <Route path="wardrobe/:id" element={<ClothingDetailPage />} />
                   <Route path="categories" element={<CategoriesPage />} />
                   <Route path="outfits" element={<OutfitsPage />} />
-                  <Route path="planner" element={<ActivityPage />} />
+                  <Route path="planner" element={<Navigate to="/app/planner/wear" replace />} />
+                  <Route path="planner/wear" element={<ActivityPage view="wear" />} />
+                  <Route path="planner/plan" element={<ActivityPage view="plan" />} />
                   <Route path="profile" element={<ProfilePage />} />
                   <Route path="admin/users" element={<AdminUsersPage />} />
                 </Route>
