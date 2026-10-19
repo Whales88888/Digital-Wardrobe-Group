@@ -114,6 +114,7 @@ export class ClothingService {
     clothing_id: number,
     user_id: number,
   ): Promise<Clothing | null> {
+    this.validateClothingId(clothing_id);
     return this.clothingRepository.findOne({
       where: { clothing_id, user_id },
     });
@@ -177,12 +178,19 @@ export class ClothingService {
   }
 
   async remove(clothing_id: number, user_id: number): Promise<void> {
+    this.validateClothingId(clothing_id);
     const result = await this.clothingRepository.delete({
       clothing_id,
       user_id,
     });
     if (!result.affected) {
       throw new NotFoundException('Clothing not found');
+    }
+  }
+
+  private validateClothingId(clothing_id: number): void {
+    if (!Number.isSafeInteger(clothing_id) || clothing_id < 1) {
+      throw new BadRequestException('Invalid clothing ID');
     }
   }
 

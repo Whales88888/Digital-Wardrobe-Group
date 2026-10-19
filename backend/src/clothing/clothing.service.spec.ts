@@ -93,6 +93,25 @@ describe('ClothingService', () => {
     expect(repository.update).not.toHaveBeenCalled();
   });
 
+  it.each([Number.NaN, 0, -1, 1.5])(
+    'rejects invalid clothing ID %p before accessing the repository',
+    async (clothingId) => {
+      await expect(service.findOne(clothingId, 12)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      await expect(
+        service.update(clothingId, { name: 'Changed' }, 12),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.remove(clothingId, 12)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+
+      expect(repository.findOne).not.toHaveBeenCalled();
+      expect(repository.update).not.toHaveBeenCalled();
+      expect(repository.delete).not.toHaveBeenCalled();
+    },
+  );
+
   it('rejects incomplete clothing data before writing', async () => {
     await expect(service.create({ name: '  ' }, 12)).rejects.toBeInstanceOf(
       BadRequestException,
